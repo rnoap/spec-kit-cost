@@ -10,8 +10,9 @@ REPORT_SCRIPT=""
 
 setup() {
   setup_temp_dir
-  RESET_SCRIPT="$(cd "$ORIGINAL_DIR" && pwd)/scripts/bash/reset-cost.sh"
-  REPORT_SCRIPT="$(cd "$ORIGINAL_DIR" && pwd)/scripts/bash/report-cost.sh"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  RESET_SCRIPT="$REPO_ROOT/scripts/bash/reset-cost.sh"
+  REPORT_SCRIPT="$REPO_ROOT/scripts/bash/report-cost.sh"
 }
 
 teardown() {

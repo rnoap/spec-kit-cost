@@ -5,7 +5,8 @@
 # provider: Token count data source.
 #   self-report  (default) — AI agent estimates tokens using chars ÷ 4 heuristic.
 #   manual       — Developer supplies token counts when prompted after each step.
-#   log-file     — Parse a provider usage log file (planned for v1.1; stub in v1.0.0).
+#   log-file     — NOT YET IMPLEMENTED (v1.0.0 stub; exits 0 with a warning and
+#                  skips the ledger entry). Full implementation planned for v1.1.
 # Override at runtime: export SPECKIT_COST_PROVIDER=manual
 provider: self-report
 

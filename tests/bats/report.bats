@@ -10,8 +10,9 @@ RECORD_SCRIPT=""
 
 setup() {
   setup_temp_dir
-  REPORT_SCRIPT="$(cd "$ORIGINAL_DIR" && pwd)/scripts/bash/report-cost.sh"
-  RECORD_SCRIPT="$(cd "$ORIGINAL_DIR" && pwd)/scripts/bash/record-cost.sh"
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  REPORT_SCRIPT="$REPO_ROOT/scripts/bash/report-cost.sh"
+  RECORD_SCRIPT="$REPO_ROOT/scripts/bash/record-cost.sh"
 }
 
 teardown() {
@@ -84,20 +85,26 @@ teardown() {
 # ── SC-005: after_implement hook wiring (manifest contract check) ─────────────
 
 @test "SC-005: extension.yml after_implement block chains speckit.cost.record then speckit.cost.report" {
-  local ext_yml="$(cd "$ORIGINAL_DIR" && pwd)/extension.yml"
+  local ext_yml="$REPO_ROOT/extension.yml"
   [ -f "$ext_yml" ]
 
-  # Extract the after_implement block and assert both commands appear in order.
+  # FIXED (low): scope the line-order check to within the after_implement block
+  # rather than searching the entire file (avoids false ordering from provides.commands).
+  local after_impl_start
+  after_impl_start="$(grep -n 'after_implement' "$ext_yml" | head -1 | cut -d: -f1)"
+  [ -n "$after_impl_start" ]
+
+  # Extract 10 lines from the after_implement stanza.
   local block
-  block="$(grep -A10 'after_implement' "$ext_yml")"
+  block="$(tail -n +"$after_impl_start" "$ext_yml" | head -10)"
   printf '%s\n' "$block" | grep -q 'speckit.cost.record'
   printf '%s\n' "$block" | grep -q 'speckit.cost.report'
 
-  # record must appear before report.
-  local record_line report_line
-  record_line="$(grep -n 'speckit.cost.record' "$ext_yml" | tail -1 | cut -d: -f1)"
-  report_line="$(grep -n 'speckit.cost.report' "$ext_yml" | tail -1 | cut -d: -f1)"
-  [ "$record_line" -lt "$report_line" ]
+  # record must appear before report within that block.
+  local record_offset report_offset
+  record_offset="$(printf '%s\n' "$block" | grep -n 'speckit.cost.record' | head -1 | cut -d: -f1)"
+  report_offset="$(printf '%s\n' "$block" | grep -n 'speckit.cost.report' | head -1 | cut -d: -f1)"
+  [ "$record_offset" -lt "$report_offset" ]
 }
 
 # ── SC-008: Empty state ───────────────────────────────────────────────────────

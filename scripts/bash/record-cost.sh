@@ -33,13 +33,13 @@ note=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --step)        step="$2";             shift 2 ;;
-    --in-chars)    in_chars="$2";         shift 2 ;;
-    --out-chars)   out_chars="$2";        shift 2 ;;
-    --in-tokens)   in_tokens="$2";        shift 2 ;;
-    --out-tokens)  out_tokens="$2";       shift 2 ;;
+    --step)        step="$2";              shift 2 ;;
+    --in-chars)    in_chars="$2";          shift 2 ;;
+    --out-chars)   out_chars="$2";         shift 2 ;;
+    --in-tokens)   in_tokens="$2";         shift 2 ;;
+    --out-tokens)  out_tokens="$2";        shift 2 ;;
     --provider)    provider_override="$2"; shift 2 ;;
-    --note)        note="$2";             shift 2 ;;
+    --note)        note="$2";              shift 2 ;;
     *) shift ;;
   esac
 done
@@ -59,6 +59,22 @@ case "$step" in
   *) _fail "unknown step '$step' (must be one of the seven after_* events)" ;;
 esac
 
+# ── Early numeric validation (FIXED high: prevents awk injection) ─────────────
+# Validate in_chars and out_chars before any awk call.
+# If they are set, they must be non-negative integers.
+if [[ -n "$in_chars" ]] && [[ ! "$in_chars" =~ ^[0-9]+$ ]]; then
+  _fail "--in-chars must be a non-negative integer, got: '$in_chars'"
+fi
+if [[ -n "$out_chars" ]] && [[ ! "$out_chars" =~ ^[0-9]+$ ]]; then
+  _fail "--out-chars must be a non-negative integer, got: '$out_chars'"
+fi
+
+# ── Mixed --in-tokens / --out-chars guard (FIXED low: silent discard) ────────
+if [[ -n "$in_tokens"  && -n "$out_chars"  && -z "$in_chars" ]] ||
+   [[ -n "$in_chars"   && -n "$out_tokens" && -z "$out_chars" ]]; then
+  _fail "mixed --in-tokens/--out-chars usage is ambiguous. Use either the --*-chars pair or the --*-tokens pair."
+fi
+
 # ── Provider resolution (CR-R1, §III) ────────────────────────────────────────
 # Precedence: --provider flag → SPECKIT_COST_PROVIDER env → config file → default
 provider="${provider_override:-${SPECKIT_COST_PROVIDER:-}}"
@@ -68,6 +84,8 @@ provider="${provider_override:-${SPECKIT_COST_PROVIDER:-}}"
 # ── Config values (CR-R2) ────────────────────────────────────────────────────
 price_per_1k="$(config_get price_per_1k)"
 [[ -z "$price_per_1k" ]] && price_per_1k="0.003"
+# Validate price_per_1k is numeric before awk (FIXED high: awk injection via config).
+[[ "$price_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]] || price_per_1k="0.003"
 model="$(config_get model)"
 [[ -z "$model" ]] && model="unknown"
 
@@ -75,12 +93,13 @@ model="$(config_get model)"
 feature_json=".specify/feature.json"
 spec=""
 if [[ -f "$feature_json" ]]; then
-  # Collapse multi-line JSON to a single line for field extraction.
   feature_json_line="$(tr -d '\n\r' < "$feature_json")"
-  # Try "feature_directory" (spec-kit >= 0.9) then "feature_dir" (older).
   feature_dir="$(jsonl_get_field feature_directory "$feature_json_line")"
   [[ -z "$feature_dir" ]] && feature_dir="$(jsonl_get_field feature_dir "$feature_json_line")"
-  spec="$(basename "$feature_dir")"
+  # FIXED (low): guard against empty feature_dir before calling basename.
+  if [[ -n "$feature_dir" ]]; then
+    spec="$(basename "$feature_dir")"
+  fi
 fi
 [[ -z "$spec" ]] && _fail "could not determine spec identifier from .specify/feature.json"
 
@@ -88,23 +107,24 @@ fi
 case "$provider" in
 
   self-report)
-    # Require either --in-chars or --in-tokens.
     if [[ -n "$in_tokens" && -n "$out_tokens" ]]; then
       # Direct token counts supplied (e.g., from a wrapper that already computed them).
       : # use in_tokens / out_tokens as-is below
     elif [[ -n "$in_chars" || -n "$out_chars" ]]; then
       # chars ÷ 4 heuristic (FR-013, clarification §2026-07-13).
+      # FIXED (high): use awk -v to pass variables safely (no shell interpolation).
       in_chars="${in_chars:-0}"
       out_chars="${out_chars:-0}"
-      in_tokens="$(awk "BEGIN { printf \"%d\", int(($in_chars + 3) / 4) }")"
-      out_tokens="$(awk "BEGIN { printf \"%d\", int(($out_chars + 3) / 4) }")"
+      in_tokens="$(awk -v c="$in_chars" 'BEGIN { printf "%d", int((c + 3) / 4) }')" \
+        || _fail "could not compute input token count"
+      out_tokens="$(awk -v c="$out_chars" 'BEGIN { printf "%d", int((c + 3) / 4) }')" \
+        || _fail "could not compute output token count"
     else
       _fail "self-report provider requires --in-chars/--out-chars or --in-tokens/--out-tokens"
     fi
     ;;
 
   manual)
-    # Developer supplied counts directly via --in-tokens and --out-tokens.
     [[ -z "$in_tokens" || -z "$out_tokens" ]] && \
       _fail "manual provider requires --in-tokens and --out-tokens"
     ;;
@@ -120,13 +140,15 @@ case "$provider" in
 esac
 
 # Validate token counts are non-negative integers (data-model.md validation rules).
-[[ "$in_tokens" =~ ^[0-9]+$ ]] || _fail "input_tokens must be a non-negative integer"
+[[ "$in_tokens"  =~ ^[0-9]+$ ]] || _fail "input_tokens must be a non-negative integer"
 [[ "$out_tokens" =~ ^[0-9]+$ ]] || _fail "output_tokens must be a non-negative integer"
 
 # ── Cost computation (CR-R4, R2) ─────────────────────────────────────────────
-# cost_usd = (input_tokens + output_tokens) / 1000 * price_per_1k
-# Stored at 6 decimal places; awk handles float arithmetic.
-cost_usd="$(awk "BEGIN { printf \"%.6f\", ($in_tokens + $out_tokens) / 1000 * $price_per_1k }")"
+# FIXED (high): use awk -v to pass all values — prevents shell injection,
+# and || _fail ensures FR-015 non-blocking contract under set -euo pipefail.
+cost_usd="$(awk -v i="$in_tokens" -v o="$out_tokens" -v p="$price_per_1k" \
+  'BEGIN { printf "%.6f", (i + o) / 1000 * p }')" \
+  || _fail "could not compute cost_usd"
 
 # ── Ledger directory and file (CR-R5, §II) ───────────────────────────────────
 ledger_dir="$(config_get_ledger_dir)"
@@ -135,21 +157,23 @@ mkdir -p "$ledger_dir" || _fail "could not create ledger directory '$ledger_dir'
 
 # ── Emit JSONL record (CR-R5, FR-003, FR-018) ────────────────────────────────
 record="$(jsonl_emit \
-  --step        "$step" \
-  --spec        "$spec" \
-  --provider    "$provider" \
+  --step          "$step" \
+  --spec          "$spec" \
+  --provider      "$provider" \
   --input_tokens  "$in_tokens" \
   --output_tokens "$out_tokens" \
-  --model       "$model" \
-  --cost_usd    "$cost_usd" \
-  --note        "$note")"
+  --model         "$model" \
+  --cost_usd      "$cost_usd" \
+  --note          "$note")" \
+  || _fail "could not assemble JSONL record"
 
 printf '%s\n' "$record" >> "$ledger" || _fail "could not append to ledger '$ledger'"
 
 # ── Inline summary (CR-R6, FR-002, SC-001) ───────────────────────────────────
 # Display step name without "after_" prefix (data-model.md §step storage vs display).
 display_step="${step#after_}"
-# cost_usd displayed at 4 decimal places.
-display_cost="$(awk "BEGIN { printf \"%.4f\", $cost_usd }")"
+# FIXED (high): use awk -v to pass cost_usd safely.
+display_cost="$(awk -v c="$cost_usd" 'BEGIN { printf "%.4f", c }')" \
+  || display_cost="$cost_usd"
 printf '💰 %s: ~%s in / ~%s out tokens ≈ $%s\n' \
   "$display_step" "$in_tokens" "$out_tokens" "$display_cost"

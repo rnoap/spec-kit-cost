@@ -59,7 +59,7 @@ fi
 entries=()
 while IFS= read -r line; do
   entries+=("$line")
-done < <(grep "\"spec\":\"${spec}\"" "$ledger" 2>/dev/null || true)
+done < <(grep -F "\"spec\":\"${spec}\"" "$ledger" 2>/dev/null || true)
 
 if [[ ${#entries[@]} -eq 0 ]]; then
   # FR-017, SC-008: explicit empty-state message.
@@ -81,17 +81,22 @@ for entry in "${entries[@]}"; do
   out_tok="$(jsonl_get_field output_tokens "$entry")"
   cost_raw="$(jsonl_get_field cost_usd "$entry")"
 
+  # FIXED (medium): validate cost_raw before awk; use -v to prevent injection.
+  if [[ ! "$cost_raw" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+    cost_raw="0"
+  fi
+
   # Display cost at 4 decimal places.
-  cost_4dp="$(awk "BEGIN { printf \"%.4f\", $cost_raw }")"
+  cost_4dp="$(awk -v c="$cost_raw" 'BEGIN { printf "%.4f", c }')"
 
   printf '| %-12s | %12s | %13s | %10s |\n' \
     "$display_step" "$in_tok" "$out_tok" "\$$cost_4dp"
 
-  # Accumulate total using awk for float precision (R2).
-  total_cost="$(awk "BEGIN { printf \"%.6f\", $total_cost + $cost_raw }")"
+  # Accumulate total using awk -v for float precision and injection safety (R2).
+  total_cost="$(awk -v t="$total_cost" -v c="$cost_raw" 'BEGIN { printf "%.6f", t + c }')"
 done
 
 # ── Cumulative total (CR-P4, SC-003) ─────────────────────────────────────────
 # Sum from 6dp stored values, displayed at 4dp.
-total_4dp="$(awk "BEGIN { printf \"%.4f\", $total_cost }")"
-printf '\n**Total: \$%s** (%d step(s))\n' "$total_4dp" "${#entries[@]}"
+total_4dp="$(awk -v t="$total_cost" 'BEGIN { printf "%.4f", t }')"
+printf '\n**Total: $%s** (%d step(s))\n' "$total_4dp" "${#entries[@]}"

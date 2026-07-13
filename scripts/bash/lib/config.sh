@@ -24,6 +24,7 @@ config_get() {
     value="$(grep -E "^[[:space:]]*${key}[[:space:]]*:" "$config_file" 2>/dev/null \
       | head -1 \
       | sed "s/^[[:space:]]*${key}[[:space:]]*:[[:space:]]*//" \
+      | sed 's/[[:space:]]*#.*$//' \
       | sed 's/[[:space:]]*$//' \
       | sed "s/^['\"]//; s/['\"]$//")"
   fi

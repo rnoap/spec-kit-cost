@@ -9,8 +9,9 @@ RECORD_SCRIPT=""
 
 setup() {
   setup_temp_dir
-  # Resolve absolute path to the script under test.
-  RECORD_SCRIPT="$(cd "$ORIGINAL_DIR" && pwd)/scripts/bash/record-cost.sh"
+  # Resolve script paths using $BATS_TEST_DIRNAME (repo-relative, invocation-independent).
+  REPO_ROOT="$(cd "$BATS_TEST_DIRNAME/../.." && pwd)"
+  RECORD_SCRIPT="$REPO_ROOT/scripts/bash/record-cost.sh"
 }
 
 teardown() {
@@ -94,6 +95,8 @@ teardown() {
 # ── SC-007: Failure non-blocking ──────────────────────────────────────────────
 
 @test "SC-007: exit code is 0 even when ledger directory is unwritable" {
+  # FIXED (low): chmod 000 is a no-op for uid 0 — skip under root.
+  [ "$(id -u)" -ne 0 ] || skip "chmod test requires non-root user"
   mkdir -p .specify/extensions/cost
   chmod 000 .specify/extensions/cost
 
@@ -104,6 +107,8 @@ teardown() {
 }
 
 @test "SC-007: exactly one stderr warning line when ledger write fails" {
+  # FIXED (low): chmod 000 is a no-op for uid 0 — skip under root.
+  [ "$(id -u)" -ne 0 ] || skip "chmod test requires non-root user"
   mkdir -p .specify/extensions/cost
   chmod 000 .specify/extensions/cost
 

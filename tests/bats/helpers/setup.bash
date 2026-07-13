@@ -50,8 +50,11 @@ seed_ledger_entries() {
   for i in $(seq 1 "$count"); do
     local idx=$(( (i - 1) % 7 ))
     local step="${steps[$idx]}"
-    printf '{"v":1,"ts":"2026-07-13T12:00:0%sZ","step":"%s","spec":"%s","provider":"self-report","input_tokens":%s,"output_tokens":%s,"model":"unknown","cost_usd":0.00300%s,"note":""}\n' \
-      "$i" "$step" "$spec" $((i * 100)) $((i * 50)) "$i" >> "$ledger"
+    # FIXED (low): use modulo to keep seconds in 00-59 for valid ISO timestamps.
+    local sec
+    sec="$(printf '%02d' $(( (i - 1) % 60 )))"
+    printf '{"v":1,"ts":"2026-07-13T12:00:%sZ","step":"%s","spec":"%s","provider":"self-report","input_tokens":%s,"output_tokens":%s,"model":"unknown","cost_usd":0.003000,"note":""}\n' \
+      "$sec" "$step" "$spec" $((i * 100)) $((i * 50)) >> "$ledger"
   done
 }
 

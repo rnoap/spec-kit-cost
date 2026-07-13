@@ -57,13 +57,12 @@ hooks:
     command: speckit.cost.record
     optional: true
     description: "Record cost after checklist generation step"
+  # after_implement fires two commands in sequence: record cost first, then
+  # auto-display the full breakdown (FR-007). Flat list form matches the
+  # contracts/extension-manifest.md contract and the spec-kit catalog format.
   after_implement:
-    - command: speckit.cost.record
-      optional: true
-      description: "Record cost after implementation step"
-    - command: speckit.cost.report
-      optional: true
-      description: "Display cumulative cost breakdown after implementation completes"
+    - speckit.cost.record
+    - speckit.cost.report
 
 tags:
   - cost

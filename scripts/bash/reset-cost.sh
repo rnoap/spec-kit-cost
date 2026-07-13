@@ -6,9 +6,9 @@
 # With --yes:    rewrites the ledger removing only the current spec's entries.
 #               Uses temp file + atomic mv for safety (R4).
 #
-# §II compliance note: mktemp creates a transient file in /tmp that is guaranteed
-# to be removed by a trap EXIT before the script exits. The durable write target
-# is always .specify/extensions/cost/cost-ledger.jsonl (CR-X4).
+# §II + atomic mv note (FIXED low): mktemp is created beside the ledger
+# (same filesystem) to guarantee a true atomic rename rather than a cross-
+# filesystem copy+unlink. The durable write target remains cost-ledger.jsonl.
 #
 # Usage:
 #   reset-cost.sh [--spec <feature-dir-name>] [--yes]
@@ -69,12 +69,14 @@ if [[ ! -f "$ledger" ]]; then
 fi
 
 # ── Atomic rewrite (CR-X2, R4, §II) ──────────────────────────────────────────
-# Create temp file and register cleanup trap.
-tmp="$(mktemp)"
+# FIXED (low): create temp file beside the ledger (same filesystem) to ensure
+# atomic rename rather than cross-filesystem copy+unlink (R4 research decision).
+# FIXED (medium): use -F (fixed-string) to prevent BRE metachar data loss.
+tmp="$(mktemp "${ledger}.XXXXXX")"
 trap 'rm -f "$tmp"' EXIT
 
 # Write all lines that do NOT belong to the current spec into the temp file.
-grep -v "\"spec\":\"${spec}\"" "$ledger" > "$tmp" 2>/dev/null || true
+grep -vF "\"spec\":\"${spec}\"" "$ledger" > "$tmp" 2>/dev/null || true
 
 # Count removed entries.
 original_count="$(wc -l < "$ledger" | tr -d ' ')"
