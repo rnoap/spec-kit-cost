@@ -8,6 +8,16 @@
 
 **Input**: User description: "Cost tracking per workflow step with cumulative total — the extension hooks into all spec-kit lifecycle events, records token cost to an append-only ledger, shows a brief inline cost summary after each step, and displays a full cost breakdown table plus cumulative total in USD after implement (or on-demand via a report command). Provides reset and report commands. Primary data source is self-report (the AI agent estimates tokens from visible content) with a configurable price-per-1k-tokens."
 
+## Clarifications
+
+### Session 2026-07-13
+
+- Q: What formula should `self-report` use to estimate token counts from content? → A: `chars ÷ 4` — standard 4-char-per-token heuristic (industry default, zero dependencies).
+- Q: What value is stored as the spec identifier in each ledger entry? → A: Feature directory name — e.g., `001-cost-tracking-per-step` (stable, human-readable, matches `specs/` layout).
+- Q: What should the per-step inline cost summary look like? → A: Single line with emoji prefix — `💰 <step>: ~N in / ~N out tokens ≈ $N.NNNN`.
+- Q: What is the default price per 1,000 tokens when no configuration is present? → A: $0.003 per 1K tokens (blended midpoint, clearly approximate).
+- Q: When cost tracking fails silently, what should the extension do? → A: Print a one-line warning to stderr (`⚠️  speckit-cost: <reason> — entry skipped`); omit the ledger entry; never block the workflow.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - See running cost after each workflow step (Priority: P1)
@@ -75,20 +85,20 @@ A developer who wants to restart cost tracking for a spec (e.g., after re-runnin
 ### Functional Requirements
 
 - **FR-001**: The extension MUST record a cost entry for each of the seven supported spec-kit lifecycle events: `after_specify`, `after_clarify`, `after_plan`, `after_tasks`, `after_analyze`, `after_checklist`, and `after_implement`.
-- **FR-002**: After each supported lifecycle event, the extension MUST display a brief inline cost summary for that step, including the step name, estimated input and output token counts, and the estimated cost in USD.
+- **FR-002**: After each supported lifecycle event, the extension MUST display a single-line inline cost summary in the format `💰 <step>: ~N in / ~N out tokens ≈ $N.NNNN`, where `<step>` is the lifecycle event name (e.g., `specify`), `N in` is the estimated input token count, `N out` is the estimated output token count, and `$N.NNNN` is the cost in USD rounded to 4 decimal places.
 - **FR-003**: Each recorded cost entry MUST be appended to the cost ledger without modifying or deleting any existing entry (append-only).
-- **FR-004**: Each cost entry MUST be associated with the spec it belongs to, so that entries for different specs can be distinguished during reporting.
+- **FR-004**: Each cost entry MUST be associated with the spec it belongs to using the feature directory name (e.g., `001-cost-tracking-per-step`) as the spec identifier, so that entries for different specs can be distinguished during reporting.
 - **FR-005**: The extension MUST provide an on-demand `speckit.cost.report` command that consolidates all recorded entries for the current spec and displays a per-step breakdown table plus a cumulative total in USD.
 - **FR-006**: The `speckit.cost.report` command MUST NOT depend on any lifecycle hook and MUST be runnable at any time (including mid-workflow).
 - **FR-007**: After the `implement` step completes, the extension MUST automatically display the full cumulative cost breakdown and total for the current spec, in addition to the inline per-step summary.
 - **FR-008**: The extension MUST provide a `speckit.cost.reset` command that clears the recorded cost entries for a spec session.
 - **FR-009**: The `speckit.cost.reset` command MUST require explicit confirmation from the developer before clearing any data, and MUST leave the ledger unchanged if confirmation is declined.
 - **FR-010**: The `speckit.cost.report` command MUST only read cost data and MUST NOT write to the ledger.
-- **FR-011**: The extension MUST support a configurable price-per-1k-tokens value read from the extension configuration, and MUST use a documented default value when no configuration is present.
+- **FR-011**: The extension MUST support a configurable price-per-1k-tokens value read from the extension configuration, and MUST default to **$0.003 per 1,000 tokens** when no configuration is present.
 - **FR-012**: The extension MUST support selecting a token-count data source (provider), defaulting to `self-report`, and MUST also support `log-file` and `manual` providers. The configured provider selection MAY be overridden at runtime for a single invocation.
-- **FR-013**: With the default `self-report` provider, the extension MUST estimate token counts based on the visible content of the step (approximate prompt size and response size) without requiring any external usage data.
+- **FR-013**: With the default `self-report` provider, the extension MUST estimate token counts using the `chars ÷ 4` heuristic (4 characters ≈ 1 token, the industry-standard approximation) applied separately to the estimated input content size and the estimated output content size, without requiring any external usage data.
 - **FR-014**: The extension MUST function with zero configuration — installing it and running the workflow MUST produce per-step summaries and reports using default settings alone.
-- **FR-015**: A failure in cost tracking (estimation, recording, or display) MUST NOT block, fail, or interrupt the primary spec-kit workflow step.
+- **FR-015**: A failure in cost tracking (estimation, recording, or display) MUST NOT block, fail, or interrupt the primary spec-kit workflow step. When a failure occurs, the extension MUST print exactly one warning line to stderr in the format `⚠️  speckit-cost: <reason> — entry skipped` and omit the ledger entry for that step. No entry with partial or error data is written to the ledger.
 - **FR-016**: The extension MUST NOT modify any file outside its own extension data directory; it MUST be a read-only observer of specs, agent guidance files, and project source files.
 - **FR-017**: When reporting for a spec that has no recorded entries, the extension MUST display an explicit empty-state message rather than an empty or misleading table.
 - **FR-018**: Each cost entry MUST capture, at minimum, a timestamp, the step name, the spec identifier, the provider used, the input and output token counts, the model label, and the computed cost in USD.
@@ -104,13 +114,13 @@ A developer who wants to restart cost tracking for a spec (e.g., after re-runnin
 
 ### Measurable Outcomes
 
-- **SC-001**: After each of the seven supported workflow steps completes, a per-step cost summary is displayed exactly once, showing step name, token counts, and USD cost.
+- **SC-001**: After each of the seven supported workflow steps completes, exactly one line matching the format `💰 <step>: ~N in / ~N out tokens ≈ $N.NNNN` is displayed, and no additional cost-summary lines appear for that step.
 - **SC-002**: A developer can install the extension and see a correct per-step cost summary on the very first workflow step with no configuration file present (zero-config success).
 - **SC-003**: Running the report command produces a breakdown that lists every recorded step for the current spec, and its cumulative total equals the sum of the per-step USD costs for that spec.
 - **SC-004**: When entries exist for more than one spec, the report for the current spec includes only that spec's entries (0 entries from other specs appear in the total).
 - **SC-005**: Completing the `implement` step results in the full cumulative breakdown being shown automatically, with no separate manual command required.
 - **SC-006**: The reset command never removes data without explicit confirmation — declining the prompt leaves 100% of existing entries intact.
-- **SC-007**: A forced failure in cost tracking during any step does not change the outcome of the primary spec-kit step (the workflow step still succeeds).
+- **SC-007**: A forced failure in cost tracking during any step does not change the outcome of the primary spec-kit step (the workflow step still succeeds), exactly one `⚠️  speckit-cost:` warning line appears on stderr, and no partial entry is written to the ledger.
 - **SC-008**: Requesting a report for a spec with no recorded entries yields a clear empty-state message and never an error.
 
 ## Assumptions
@@ -123,9 +133,9 @@ A developer who wants to restart cost tracking for a spec (e.g., after re-runnin
   - Supported providers are `self-report` (default), `log-file`, and `manual`.
   - Cost is expressed in USD, computed from a price-per-1k-tokens value.
   - The cost-entry record schema includes the fields listed in FR-018 (per the constitution's record schema v1).
-- **Self-report estimation approach**: With the default `self-report` provider, token counts are approximations derived from the visible content sizes the AI agent has access to (prompt and response). These are estimates, not exact provider-billed counts; the spec treats them as "best-effort estimates" and does not require billing-grade accuracy.
-- **Default configuration values**: When `cost-config.yml` is absent, the extension uses a documented default provider (`self-report`), a documented default price-per-1k-tokens, and a documented default model label. The exact default numeric price and model label are configuration details to be finalized in planning; the requirement is only that documented defaults exist and the extension works without configuration.
-- **Spec identity**: The "current spec" is determined from the active spec-kit feature context (the same context spec-kit itself uses to locate the feature directory). Cost entries are tagged with that identifier.
+- **Self-report estimation approach**: With the default `self-report` provider, token counts are computed using `chars ÷ 4` applied to the estimated input and output content sizes visible to the AI agent. This is the industry-standard heuristic (used in OpenAI and Anthropic documentation). Results are best-effort estimates within ~10% of actual billing counts for typical English prose; billing-grade accuracy is not required.
+- **Default configuration values**: When `cost-config.yml` is absent, the extension uses `self-report` as the provider, **$0.003 per 1,000 tokens** as the price rate, and `unknown` as the default model label. These defaults are sufficient for zero-config operation and are documented in the extension README.
+- **Spec identity**: The spec identifier stored in each ledger entry is the feature directory name (e.g., `001-cost-tracking-per-step`), read from the active spec-kit feature context (`.specify/feature.json`). This value is stable across branch renames and is human-readable in the raw ledger.
 - **Single project scope**: Cost tracking operates per project (per repository). Aggregating costs across multiple repositories is out of scope for this feature.
 - **spec-kit version**: The host environment provides spec-kit `>= 0.4.0` with a stable hooks API, and fires the seven lifecycle events this feature relies on.
 - **Provider inputs for non-default providers**: `manual` expects a developer-supplied count; `log-file` expects a readable provider usage log. Sourcing or formatting those inputs beyond what the constitution defines is deferred to planning.
