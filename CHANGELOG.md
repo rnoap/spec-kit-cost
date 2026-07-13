@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-13
+
+### Added
+- `model-catalog.txt` — pre-populated model price catalog (pipe-delimited: `model-id|input_per_M_USD|output_per_M_USD`). Ships with 7 Wibey-supported Claude models (rates sourced from wibey-cli `src/constants/models.ts`) and 10 OpenAI models (rates from openai.com/api/pricing, verified 2026-07-13). Updatable by editing one file — no script changes required (FR-007).
+- `scripts/bash/lib/catalog.sh` — POSIX catalog lookup library (`catalog_get_rates`, `catalog_get_input_rate`, `catalog_get_output_rate`). Uses only `grep`/`cut`; validates returned rates; emits non-fatal warnings for malformed entries.
+- `scripts/bash/lib/config.sh` — two new reader functions: `config_get_input_rate_per_1k` and `config_get_output_rate_per_1k`. Return `""` when absent so callers can detect presence without a default.
+- `config-template.yml` — documented new optional keys `input_rate_per_1k` and `output_rate_per_1k` with usage examples, FR-004 priority ladder, and reference to `contracts/config-schema.md`.
+- `extension.yml` — declared `model-catalog.txt` under `provides.config`; added `input_rate_per_1k` and `output_rate_per_1k` to `config.defaults` (both `null` by default).
+- SDD artifacts for feature `002-improve-cost-accuracy`: `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, `contracts/catalog-format.md`, `contracts/config-schema.md`.
+
+### Changed
+- `record-cost.sh` — now accepts `--model <model-id>` flag; implements FR-004 per-M rate resolution priority ladder (config override → catalog → `price_per_1k` → default); replaces blended `(in+out)×p/1000` formula with two-rate `(in×ir/1M)+(out×or/1M)` formula. Active model stored in ledger `model` field.
+- `report-cost.sh` — costs are now **recomputed at display time** from stored token counts + stored model ID using the current catalog/config rates (ignores `cost_usd` stored in ledger); adds **Cumulative** column showing running total through each row; grand total line derives from final cumulative value. Sources `lib/catalog.sh`.
+- `commands/speckit.cost.record.md` — added Step 3a: instructs AI to extract the harness-injected model ID from `Current model: <name> (<id>)` in session context and pass it as `--model <id>` to the script. Falls back to `cost-config.yml` `model` key or `unknown`.
+
+### Fixed
+- Cost under-reporting for premium models (e.g., Opus 4.8 was billed at Sonnet input rate for all tokens). Output tokens are now priced at their correct, higher rate per model.
+- `model` field in ledger entries now reflects the harness-detected model ID rather than the static `cost-config.yml` label.
+
 ## [1.0.0] - 2026-07-13
 
 ### Added
@@ -88,4 +107,6 @@ Link definitions (update on each release):
   [X.Y.Z]: https://github.com/rnoap/spec-kit-cost/compare/vA.B.C...vX.Y.Z
 -->
 
-[Unreleased]: https://github.com/rnoap/spec-kit-cost/compare/HEAD...HEAD
+[Unreleased]: https://github.com/rnoap/spec-kit-cost/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.0.0...v1.0.0

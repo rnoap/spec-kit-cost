@@ -10,17 +10,41 @@
 # Override at runtime: export SPECKIT_COST_PROVIDER=manual
 provider: self-report
 
-# price_per_1k: Cost in USD per 1,000 tokens.
-#   Default is $0.003 (blended midpoint across common frontier models).
-#   Adjust to match your actual provider pricing.
-# Examples:
-#   Claude Sonnet input:  0.003
-#   Claude Sonnet output: 0.015
-#   GPT-4o-mini blended:  0.0002
+# price_per_1k: Legacy blended rate in USD per 1,000 tokens.
+#   Used as fallback when BOTH of the following are true:
+#     1. No per-type override keys are set (see input_rate_per_1k / output_rate_per_1k below).
+#     2. The active model is not found in model-catalog.txt.
+#   For known models, the catalog provides separate input/output rates automatically —
+#   you do not need to set this key for accurate results.
 price_per_1k: 0.003
 
-# model: Label stored in each ledger entry for identification.
-#   Does not affect cost computation — purely informational.
-#   Set to your actual model name for readable reports.
-# Examples: claude-sonnet-4, gpt-4o-mini, gemini-1.5-flash
+# input_rate_per_1k / output_rate_per_1k: Per-type rate overrides in USD per 1,000 tokens.
+#   When set, these take PRIORITY over the model catalog for that token type.
+#   Use cases:
+#     - Your model is not yet in the catalog (new or private model).
+#     - You have an enterprise negotiated rate different from the list price.
+#     - You want to pin a specific rate regardless of model changes.
+#
+#   Rate resolution order (FR-004):
+#     1. input_rate_per_1k / output_rate_per_1k  (this file — highest priority)
+#     2. model-catalog.txt entry for the active model (auto-detected from harness)
+#     3. price_per_1k (this file — legacy blended fallback)
+#     4. Hardcoded default: $3/M input, $15/M output (Sonnet-class)
+#
+#   Partial override is valid: set only the key you want to override; the other
+#   type resolves from the catalog or price_per_1k as normal.
+#
+#   See specs/002-improve-cost-accuracy/contracts/config-schema.md for full details.
+#
+# Examples (USD per 1,000 tokens — divide published $/M price by 1000):
+#   Claude Opus 4.8 input:   0.005   ($5/M ÷ 1000)
+#   Claude Opus 4.8 output:  0.025   ($25/M ÷ 1000)
+#   Custom enterprise input: 0.002
+# input_rate_per_1k: 0.005
+# output_rate_per_1k: 0.025
+
+# model: Deprecated as a pricing input. The active model is now detected
+#   automatically from the Wibey harness-injected session context.
+#   This key is only used as a label fallback when the harness signal is absent.
+# Examples: claude-sonnet-4-6, gpt-5.4
 model: unknown

@@ -33,6 +33,26 @@ Check `SPECKIT_COST_PROVIDER` environment variable first.
 If unset, read `provider` from `.specify/extensions/cost/cost-config.yml`.
 If absent, use `self-report` (default).
 
+### Step 3a — Detect active model (FR-002)
+
+Before gathering token counts, identify the model active during this session.
+
+Look for a line in your session context of the form:
+
+```
+Current model: <Display Name> (<model-id>)
+```
+
+This line is injected by the Wibey harness and is authoritative — do **not** guess or
+self-identify. Extract the model ID from the parenthetical portion (e.g., `claude-sonnet-4-6`
+from `Current model: Claude Sonnet 4 (claude-sonnet-4-6)`).
+
+If no such line is found, check `model` in `.specify/extensions/cost/cost-config.yml`.
+If that is also absent or `unknown`, use the string `unknown`.
+
+Store the result as `<MODEL_ID>` and include `--model <MODEL_ID>` in every script
+invocation below.
+
 ### Step 3 — Provider branch: gather inputs
 
 **`self-report` (default)**
@@ -49,6 +69,7 @@ Run:
 ```bash
 bash scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
+  --model <MODEL_ID> \
   --in-chars <IN_CHARS> \
   --out-chars <OUT_CHARS>
 ```
@@ -64,6 +85,7 @@ Run:
 ```bash
 bash scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
+  --model <MODEL_ID> \
   --provider manual \
   --in-tokens <IN_TOKENS> \
   --out-tokens <OUT_TOKENS>
@@ -75,6 +97,7 @@ Run (the script emits a non-blocking warning; the entry is skipped in v1.0.0):
 ```bash
 bash scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
+  --model <MODEL_ID> \
   --provider log-file
 ```
 

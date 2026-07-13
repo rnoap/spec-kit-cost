@@ -42,6 +42,44 @@ config_get() {
   printf '%s' "$value"
 }
 
+# config_get_input_rate_per_1k [config_file]
+# Read 'input_rate_per_1k' from cost-config.yml.
+# Returns the raw float string, or "" when the key is absent.
+# NO hardcoded default — callers detect absence via empty return.
+# Unit: USD per 1,000 tokens. Callers must multiply ×1000 for per-M math.
+config_get_input_rate_per_1k() {
+  local config_file="${1:-.specify/extensions/cost/cost-config.yml}"
+  local value=""
+  if [[ -f "$config_file" ]]; then
+    value="$(grep -E "^[[:space:]]*input_rate_per_1k[[:space:]]*:" "$config_file" 2>/dev/null \
+      | head -1 \
+      | sed "s/^[[:space:]]*input_rate_per_1k[[:space:]]*:[[:space:]]*//" \
+      | sed 's/[[:space:]]*#.*$//' \
+      | sed 's/[[:space:]]*$//' \
+      | sed "s/^['\"]//; s/['\"]$//")"
+  fi
+  printf '%s' "$value"
+}
+
+# config_get_output_rate_per_1k [config_file]
+# Read 'output_rate_per_1k' from cost-config.yml.
+# Returns the raw float string, or "" when the key is absent.
+# NO hardcoded default — callers detect absence via empty return.
+# Unit: USD per 1,000 tokens. Callers must multiply ×1000 for per-M math.
+config_get_output_rate_per_1k() {
+  local config_file="${1:-.specify/extensions/cost/cost-config.yml}"
+  local value=""
+  if [[ -f "$config_file" ]]; then
+    value="$(grep -E "^[[:space:]]*output_rate_per_1k[[:space:]]*:" "$config_file" 2>/dev/null \
+      | head -1 \
+      | sed "s/^[[:space:]]*output_rate_per_1k[[:space:]]*:[[:space:]]*//" \
+      | sed 's/[[:space:]]*#.*$//' \
+      | sed 's/[[:space:]]*$//' \
+      | sed "s/^['\"]//; s/['\"]$//")"
+  fi
+  printf '%s' "$value"
+}
+
 # config_get_ledger_dir
 # Return the directory where the ledger and config live.
 # Always under .specify/extensions/cost/ (Constitution §II).

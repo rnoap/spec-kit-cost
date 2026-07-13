@@ -1,0 +1,32 @@
+# spec-kit-cost model price catalog
+# Format: model-id|input_per_M_USD|output_per_M_USD
+# All rates in USD per million tokens.
+#
+# Claude rates: wibey-cli src/constants/models.ts (Walmart gateway rates — not public Anthropic list prices)
+# OpenAI rates: openai.com/api/pricing (fetched 2026-07-13; classic gpt-4o/o1/o3 no longer listed)
+#
+# NOTE: The Wibey gateway routes to Anthropic only. OpenAI entries support
+#       manual cost recording (--model gpt-5.4) for developers using OpenAI directly.
+# Rate resolution — see also record-cost.sh and report-cost.sh (same FR-004 ladder in both).
+# Update this file to change prices; no script changes required (FR-007).
+
+# ── Claude models (Wibey gateway rates) ──────────────────────────────────────
+claude-opus-4-8|5|25
+claude-opus-4-6|5|25
+claude-sonnet-5|3|15
+claude-sonnet-4-6|3|15
+claude-sonnet-4-5-20250929|3|15
+claude-sonnet-4-20250514|3|15
+claude-haiku-4-5-20251001|1|5
+
+# ── OpenAI models (public API rates, verified 2026-07-13) ─────────────────────
+gpt-5.6-sol|5|30
+gpt-5.6-terra|2.5|15
+gpt-5.6-luna|1|6
+gpt-5.5|5|30
+gpt-5.5-pro|30|180
+gpt-5.4|2.5|15
+gpt-5.4-mini|0.75|4.5
+gpt-5.4-nano|0.2|1.25
+gpt-5.4-pro|30|180
+o4-mini-2025-04-16|4|16
