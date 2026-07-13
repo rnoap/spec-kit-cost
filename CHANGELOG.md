@@ -22,7 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `git` extension installed (`speckit.git.*` commands)
 - `brownfield` extension installed (`speckit.brownfield.*` commands)
 - Code knowledge graph built (`.code-review-graph/`)
-- `specs/001-cost-tracking-per-step/spec.md` — first feature spec:
+- `specs/001-cost-tracking-per-step/plan.md` — implementation plan:
+  - Extension file structure (`extension.yml`, `commands/`, `scripts/bash/`)
+  - Data model: Cost Entry schema v1 (verbatim from constitution §IV)
+  - Command ↔ script design table; hook wiring for 7 lifecycle events
+  - Supporting artifacts: `research.md`, `data-model.md`, `quickstart.md`, `contracts/`
+- `specs/001-cost-tracking-per-step/spec.md` — first feature spec (clarified):
   - 3 user stories (P1 per-step inline summary, P2 cumulative report, P3 safe reset)
   - 18 functional requirements, 8 measurable success criteria, 7 edge cases
   - Key entities: Cost Entry, Cost Ledger, Cost Configuration, Cost Report
