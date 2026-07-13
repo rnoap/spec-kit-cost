@@ -35,6 +35,22 @@
       },
       "registered_skills": [],
       "installed_at": "2026-07-13T16:34:46.860665+00:00"
+    },
+    "cost": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:451afccbe955a686a0745cabeff1a778ad1af8f45bcde11b860a27615d5acf06",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.cost.record",
+          "speckit.cost.report",
+          "speckit.cost.reset"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-07-13T18:26:34.868593+00:00"
     }
   }
 }

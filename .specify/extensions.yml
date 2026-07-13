@@ -1,5 +1,6 @@
 installed:
 - brownfield
+- cost
 - git
 settings:
   auto_execute_hooks: true
@@ -103,6 +104,14 @@ hooks:
     prompt: Commit specification changes?
     description: Auto-commit after specification
     condition: null
+  - extension: cost
+    command: speckit.cost.record
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.record?
+    description: Record cost after spec creation step
+    condition: null
   after_clarify:
   - extension: git
     command: speckit.git.commit
@@ -111,6 +120,14 @@ hooks:
     priority: 10
     prompt: Commit clarification changes?
     description: Auto-commit after spec clarification
+    condition: null
+  - extension: cost
+    command: speckit.cost.record
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.record?
+    description: Record cost after spec clarification step
     condition: null
   after_plan:
   - extension: git
@@ -121,6 +138,14 @@ hooks:
     prompt: Commit plan changes?
     description: Auto-commit after implementation planning
     condition: null
+  - extension: cost
+    command: speckit.cost.record
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.record?
+    description: Record cost after implementation planning step
+    condition: null
   after_tasks:
   - extension: git
     command: speckit.git.commit
@@ -129,6 +154,14 @@ hooks:
     priority: 10
     prompt: Commit task changes?
     description: Auto-commit after task generation
+    condition: null
+  - extension: cost
+    command: speckit.cost.record
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.record?
+    description: Record cost after task generation step
     condition: null
   after_implement:
   - extension: git
@@ -139,6 +172,22 @@ hooks:
     prompt: Commit implementation changes?
     description: Auto-commit after implementation
     condition: null
+  - extension: cost
+    command: speckit.cost.record
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.record?
+    description: Record cost after implementation step
+    condition: null
+  - extension: cost
+    command: speckit.cost.report
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.report?
+    description: Display cumulative cost breakdown after implementation completes
+    condition: null
   after_checklist:
   - extension: git
     command: speckit.git.commit
@@ -148,6 +197,14 @@ hooks:
     prompt: Commit checklist changes?
     description: Auto-commit after checklist generation
     condition: null
+  - extension: cost
+    command: speckit.cost.record
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.record?
+    description: Record cost after checklist generation step
+    condition: null
   after_analyze:
   - extension: git
     command: speckit.git.commit
@@ -156,6 +213,14 @@ hooks:
     priority: 10
     prompt: Commit analysis results?
     description: Auto-commit after analysis
+    condition: null
+  - extension: cost
+    command: speckit.cost.record
+    enabled: true
+    optional: true
+    priority: 10
+    prompt: Execute speckit.cost.record?
+    description: Record cost after spec analysis step
     condition: null
   after_taskstoissues:
   - extension: git
