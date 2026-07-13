@@ -1,0 +1,25 @@
+# spec-kit-cost configuration
+# Installed at: .specify/extensions/cost/cost-config.yml
+# All keys are optional — defaults are used when this file is absent or a key is missing.
+
+# provider: Token count data source.
+#   self-report  (default) — AI agent estimates tokens using chars ÷ 4 heuristic.
+#   manual       — Developer supplies token counts when prompted after each step.
+#   log-file     — Parse a provider usage log file (planned for v1.1; stub in v1.0.0).
+# Override at runtime: export SPECKIT_COST_PROVIDER=manual
+provider: self-report
+
+# price_per_1k: Cost in USD per 1,000 tokens.
+#   Default is $0.003 (blended midpoint across common frontier models).
+#   Adjust to match your actual provider pricing.
+# Examples:
+#   Claude Sonnet input:  0.003
+#   Claude Sonnet output: 0.015
+#   GPT-4o-mini blended:  0.0002
+price_per_1k: 0.003
+
+# model: Label stored in each ledger entry for identification.
+#   Does not affect cost computation — purely informational.
+#   Set to your actual model name for readable reports.
+# Examples: claude-sonnet-4, gpt-4o-mini, gemini-1.5-flash
+model: unknown

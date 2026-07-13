@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-13
+
 ### Added
+- `extension.yml` — full extension manifest (3 commands, 7 `after_*` hooks, config block; CR-M1..M5 ✅)
+- `config-template.yml` — defaults: `provider: self-report`, `price_per_1k: 0.003`, `model: unknown`
+- `scripts/bash/lib/json.sh` — JSONL emit + field extraction; no jq (research R1)
+- `scripts/bash/lib/config.sh` — flat YAML key reader with hardcoded defaults (research R3)
+- `scripts/bash/record-cost.sh` — per-step cost recording; self-report (`chars÷4`), manual, log-file stub; always exits 0
+- `scripts/bash/report-cost.sh` — per-spec breakdown table + cumulative USD total; read-only
+- `scripts/bash/reset-cost.sh` — confirmation-gated per-spec ledger reset; atomic temp+mv (research R4)
+- `commands/speckit.cost.record.md` — AI hook command with 3-provider branch instructions
+- `commands/speckit.cost.report.md` — AI command for on-demand + auto-after-implement report
+- `commands/speckit.cost.reset.md` — AI command for safe confirmation-gated reset
+- `tests/bats/record.bats` — 9 tests covering SC-001, SC-002, SC-007
+- `tests/bats/report.bats` — 8 tests covering SC-003, SC-004, SC-005, SC-008
+- `tests/bats/reset.bats` — 7 tests covering SC-006 (a/b/c) + edge cases
+- `tests/bats/helpers/setup.bash` — shared bats test scaffolding
+- `LICENSE` — MIT, copyright 2026 rnoap
+- `.extensionignore` — excludes tests/, specs/, .specify/ from distribution zip
+- `README.md` — installation, zero-config quickstart, provider guide, ledger format, dev instructions
+
+### Added (SDD artifacts — `specs/001-cost-tracking-per-step/`)
 - Initial spec-kit project setup with `specify init` (integration: claude)
 - Project constitution v1.0.0 — five core principles ratified:
   - I. Extension Contract First

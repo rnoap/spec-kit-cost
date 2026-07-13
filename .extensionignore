@@ -1,0 +1,28 @@
+# Files and directories to exclude from the extension distribution zip.
+# spec-kit uses this file (similar to .npmignore) when packaging the extension.
+
+# Development and testing
+tests/
+*.bats
+
+# Spec-driven development artifacts
+specs/
+.specify/
+.wibey/
+.claude/
+.vscode/
+.code-review-graph/
+
+# Version control
+.git/
+.gitignore
+
+# Documentation not needed at runtime
+CHANGELOG.md
+.extensionignore
+
+# macOS / editor artifacts
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
