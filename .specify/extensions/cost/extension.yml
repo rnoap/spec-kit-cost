@@ -32,7 +32,7 @@ provides:
       description: "Cost tracking configuration (provider, price, model label)"
       required: false
     - name: "model-catalog.txt"
-      description: "Pre-populated model price catalog (model-id|input_per_M_USD|output_per_M_USD). Update this file to change prices without modifying any scripts."
+      description: "Pre-populated model price catalog covering Claude, OpenAI, and Google Gemini models (model-id|input_per_M_USD|output_per_M_USD). Edit to add/update prices — no script changes needed."
       required: false
 
 hooks:

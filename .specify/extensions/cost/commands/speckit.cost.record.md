@@ -35,20 +35,32 @@ If absent, use `self-report` (default).
 
 ### Step 3a — Detect active model (FR-002)
 
-Before gathering token counts, identify the model active during this session.
+This extension runs on any AI coding assistant (Wibey, GitHub Copilot, Cursor, etc.).
+Identify the canonical API model ID using whichever signal is available, in this order:
 
-Look for a line in your session context of the form:
+**1. Harness injection (Wibey / Claude Code)**
+Look for a line matching `Current model: <Display Name> (<model-id>)` in your session
+context. Extract the model ID from the parenthetical:
+`Current model: Claude Sonnet 4 (claude-sonnet-4-6)` → `claude-sonnet-4-6`
 
-```
-Current model: <Display Name> (<model-id>)
-```
+**2. Host agent context (GitHub Copilot, Cursor, others)**
+Look for any explicit model identifier in your system prompt or context provided by
+the host agent. Common formats: `Model: gpt-5.4`, `Using model: gemini-2.5-pro`,
+or a model field in the agent's instructions.
 
-This line is injected by the Wibey harness and is authoritative — do **not** guess or
-self-identify. Extract the model ID from the parenthetical portion (e.g., `claude-sonnet-4-6`
-from `Current model: Claude Sonnet 4 (claude-sonnet-4-6)`).
+**3. Self-identification**
+You know what model you are. Use the canonical API model ID — not the display name.
+Examples:
+- Claude Sonnet 4.6 → `claude-sonnet-4-6`
+- GPT-5.4 → `gpt-5.4`
+- Gemini 2.5 Pro → `gemini-2.5-pro`
 
-If no such line is found, check `model` in `.specify/extensions/cost/cost-config.yml`.
-If that is also absent or `unknown`, use the string `unknown`.
+Cross-reference with `.specify/extensions/cost/model-catalog.txt` to confirm the
+exact ID string that will match a catalog entry.
+
+**4. Fallback**
+Read `model` from `.specify/extensions/cost/cost-config.yml`. If absent or `unknown`,
+use `unknown` (triggers a warning and applies the blended fallback rate).
 
 Store the result as `<MODEL_ID>` and include `--model <MODEL_ID>` in every script
 invocation below.
