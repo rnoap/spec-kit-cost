@@ -1,50 +1,178 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+==================
+Version change:   (none) → 1.0.0  (initial ratification)
+Bump rationale:   First-ever adoption — MAJOR.0.0 per convention.
+
+Modified principles:  N/A (initial document)
+Added sections:
+  - Core Principles (5 principles)
+  - Extension Compatibility Constraints
+  - Development Workflow
+  - Governance
+
+Templates reviewed:
+  ✅ .specify/templates/plan-template.md     — no changes required; Constitution Check
+                                               gates added in spec/plan outputs
+  ✅ .specify/templates/spec-template.md     — no changes required; principles apply
+                                               to spec content naturally
+  ✅ .specify/templates/tasks-template.md    — no changes required; task categories
+                                               align with extension development phases
+
+Deferred TODOs:    none
+-->
+
+# spec-kit-cost Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Extension Contract First
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+The `extension.yml` manifest is the single source of truth for this extension's
+public surface area. Every command, hook, config key, and version number MUST be
+declared there before any implementation is written.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rules:**
+- `extension.yml` MUST be updated in the same commit that adds or removes a command.
+- Command names MUST follow the pattern `speckit.cost.<action>` (lowercase, hyphens only).
+- The `schema_version` field MUST remain `"1.0"` until the upstream spec-kit schema
+  increments.
+- No behavior may be shipped that is not reflected in `extension.yml`; undocumented
+  side-effects are a contract violation.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+**Rationale:** Consumers (users, other extensions, CI) rely on the manifest to
+understand what the extension provides. Drift between manifest and behavior creates
+silent incompatibilities that are hard to debug and harder to review.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Non-Destructive Tracking (NON-NEGOTIABLE)
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+The cost extension MUST NOT modify any file outside `.specify/extensions/cost/`.
+It is a read-only observer with respect to `specs/`, `AGENTS.md`, `CLAUDE.md`,
+and all project source files.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Rules:**
+- Writes are restricted to `.specify/extensions/cost/cost-ledger.jsonl` and
+  `.specify/extensions/cost/cost-config.yml`.
+- Commands MUST never call `git add`, `git commit`, `rm`, or destructive operations
+  on spec or project files.
+- Hook scripts MUST exit 0 even on failure (non-fatal) so they never block the
+  primary workflow.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Rationale:** An extension that silently corrupts spec files is worse than no
+extension at all. Strict write isolation ensures the cost extension can be installed
+and uninstalled without risk to existing project artifacts.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. Pluggable Data Source
+
+Token count collection MUST be decoupled from persistence. The active provider is
+configured in `cost-config.yml` and the implementation switches at runtime.
+
+**Supported providers (v1.0.0):**
+| Provider | Key | Description |
+|---|---|---|
+| Self-report | `self-report` | AI agent estimates tokens from content sizes (default) |
+| Log file | `log-file` | Parse a provider-specific usage log file |
+| Manual | `manual` | Developer supplies a count via `$ARGUMENTS` |
+
+**Rules:**
+- Default provider is `self-report`; the extension MUST work with zero configuration.
+- New providers MAY be added in MINOR releases without breaking existing configs.
+- Removing a provider requires a MAJOR version bump.
+- Provider selection is read from `cost-config.yml`; environment variable
+  `SPECKIT_COST_PROVIDER` overrides it at runtime.
+
+**Rationale:** spec-kit runs on Claude, Copilot, Cursor, and other agents. Each has
+a different mechanism for exposing token usage. A hardcoded provider would make the
+extension useful only in one environment.
+
+### IV. Append-Only Ledger
+
+Cost entries are written to `.specify/extensions/cost/cost-ledger.jsonl` in
+JSON Lines format, one record per workflow step, append-only.
+
+**Record schema (v1):**
+```json
+{
+  "v": 1,
+  "ts": "2026-07-13T12:00:00Z",
+  "step": "after_specify",
+  "spec": "001-my-feature",
+  "provider": "self-report",
+  "input_tokens": 1200,
+  "output_tokens": 800,
+  "model": "claude-sonnet-4",
+  "cost_usd": 0.0024,
+  "note": ""
+}
+```
+
+**Rules:**
+- Records MUST be appended; existing lines MUST NOT be modified or deleted by hooks.
+- `speckit.cost.reset` is the only command permitted to truncate the ledger, and it
+  MUST prompt for confirmation before doing so.
+- `speckit.cost.report` reads the ledger and outputs a human-readable summary;
+  it never writes to the ledger.
+- Schema version (`"v"`) MUST be incremented when field semantics change.
+
+**Rationale:** Append-only ensures that partial or interrupted hook executions leave
+a recoverable audit trail rather than corrupting the cost record.
+
+### V. Shell-First, Zero Runtime Dependencies
+
+All persistent operations (writing, reading, appending to the ledger) MUST be
+implemented in POSIX-compatible Bash scripts. Markdown command files contain
+AI-executed instructions only; they MUST NOT embed inline shell scripts.
+
+**Rules:**
+- Scripts MUST be placed in `scripts/bash/` and MUST be POSIX-compatible (no
+  bash 5.x-only features without a feature guard).
+- PowerShell variants MUST be provided in `scripts/powershell/` for Windows
+  parity (can be added in a follow-up MINOR release).
+- No external runtime dependencies (Python, Node.js, jq, etc.) are permitted in
+  hook scripts. Pure `bash` + standard POSIX utilities only.
+- AI command files (`.md`) MAY instruct the agent to call scripts via `bash
+  .specify/extensions/cost/scripts/bash/<script>.sh`.
+
+**Rationale:** spec-kit extensions run in diverse environments. Requiring a Node.js
+or Python runtime would silently break the extension for developers who lack it.
+Shell scripts with standard utilities (awk, grep, date, printf) work everywhere.
+
+## Extension Compatibility Constraints
+
+- **spec-kit version**: `>= 0.4.0` (hooks API stabilized in 0.4.0).
+- **License**: MIT — all source files MUST include the MIT SPDX identifier.
+- **Repository**: `https://github.com/rnoap/spec-kit-cost`
+- **Community catalog**: Extension MUST be submitted to `catalog.community.json`
+  via the official spec-kit issue template once v1.0.0 is released.
+- **Semantic versioning**: MAJOR.MINOR.PATCH. No pre-release suffixes in catalog
+  entries; use them only in development branches.
+- **Language**: All code comments, documentation, README, and commit messages
+  MUST be written in English.
+
+## Development Workflow
+
+This project follows spec-driven development (SDD) using spec-kit itself.
+
+1. Every new feature or change begins with a spec in `specs/<NNN>-<name>/spec.md`.
+2. Run `/speckit-specify`, `/speckit-plan`, `/speckit-tasks`, then `/speckit-implement`
+   in order.
+3. Feature branches follow `<NNN>-<kebab-name>` (managed by `speckit.git.feature`).
+4. Commit after each spec-kit workflow step (managed by `speckit.git.commit` hooks).
+5. PRs MUST reference the corresponding spec directory.
+6. The extension MUST be self-hosting: development of spec-kit-cost SHOULD use
+   spec-kit-cost's own hooks to track its build cost (dogfooding).
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- This constitution supersedes all other guidance documents in case of conflict.
+- **Amendment procedure**: Open a PR that modifies this file, bumps the version
+  line, and updates the Sync Impact Report comment at the top. At least one reviewer
+  approval required before merging.
+- **Versioning policy**: Follow semantic versioning rules defined in Principle I.
+  Constitution version tracks document changes, not extension release versions.
+- **Compliance review**: Every PR that adds or modifies a command, hook, or script
+  MUST include a one-line statement confirming Principles I–V are satisfied.
+- **Deviations**: Any deviation from a principle MUST be documented in a
+  `specs/<NNN>-<name>/spec.md` with explicit justification before implementation.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-07-13 | **Last Amended**: 2026-07-13
