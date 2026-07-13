@@ -54,9 +54,9 @@ A developer who has completed (or partially completed) a spec's workflow wants a
 
 ---
 
-### User Story 3 - Reset the cost ledger for a spec session (Priority: P3)
+### User Story 3 - Reset cost entries for a spec (Priority: P3)
 
-A developer who wants to restart cost tracking for a spec (e.g., after re-running the workflow, or to clear estimates from a discarded attempt) wants to clear the recorded cost entries deliberately and safely.
+A developer who wants to restart cost tracking for a spec (e.g., after re-running the workflow, or to clear estimates from a discarded attempt) wants to clear the recorded cost entries for that spec deliberately and safely.
 
 **Why this priority**: Reset is a housekeeping convenience, valuable but not required for the core measure-and-report loop. It is lowest priority because the append-only ledger remains usable and reportable without it.
 
@@ -66,7 +66,7 @@ A developer who wants to restart cost tracking for a spec (e.g., after re-runnin
 
 1. **Given** the ledger contains entries for the current spec, **When** the developer invokes `speckit.cost.reset`, **Then** the command prompts for explicit confirmation before clearing any data.
 2. **Given** the reset confirmation prompt is shown, **When** the developer declines, **Then** no entries are removed and the ledger is unchanged.
-3. **Given** the reset confirmation prompt is shown, **When** the developer confirms, **Then** the ledger entries for the spec session are cleared and a subsequent `speckit.cost.report` reports no recorded data for that spec.
+3. **Given** the reset confirmation prompt is shown, **When** the developer confirms, **Then** the ledger entries for that spec are cleared and a subsequent `speckit.cost.report` reports no recorded data for that spec.
 
 ---
 
@@ -91,11 +91,11 @@ A developer who wants to restart cost tracking for a spec (e.g., after re-runnin
 - **FR-005**: The extension MUST provide an on-demand `speckit.cost.report` command that consolidates all recorded entries for the current spec and displays a per-step breakdown table plus a cumulative total in USD.
 - **FR-006**: The `speckit.cost.report` command MUST NOT depend on any lifecycle hook and MUST be runnable at any time (including mid-workflow).
 - **FR-007**: After the `implement` step completes, the extension MUST automatically display the full cumulative cost breakdown and total for the current spec, in addition to the inline per-step summary.
-- **FR-008**: The extension MUST provide a `speckit.cost.reset` command that clears the recorded cost entries for a spec session.
+- **FR-008**: The extension MUST provide a `speckit.cost.reset` command that clears the recorded cost entries for the current spec.
 - **FR-009**: The `speckit.cost.reset` command MUST require explicit confirmation from the developer before clearing any data, and MUST leave the ledger unchanged if confirmation is declined.
 - **FR-010**: The `speckit.cost.report` command MUST only read cost data and MUST NOT write to the ledger.
 - **FR-011**: The extension MUST support a configurable price-per-1k-tokens value read from the extension configuration, and MUST default to **$0.003 per 1,000 tokens** when no configuration is present.
-- **FR-012**: The extension MUST support selecting a token-count data source (provider), defaulting to `self-report`, and MUST also support `log-file` and `manual` providers. The configured provider selection MAY be overridden at runtime for a single invocation.
+- **FR-012**: The extension MUST support selecting a token-count data source (provider), defaulting to `self-report`, and MUST also support `manual` and `log-file` providers. The configured provider selection MAY be overridden at runtime for a single invocation. For v1.0.0: `manual` is fully implemented (developer supplies token counts when prompted); `log-file` ships as a documented stub that emits a non-blocking stderr warning and skips the entry (planned for v1.1).
 - **FR-013**: With the default `self-report` provider, the extension MUST estimate token counts using the `chars ÷ 4` heuristic (4 characters ≈ 1 token, the industry-standard approximation) applied separately to the estimated input content size and the estimated output content size, without requiring any external usage data.
 - **FR-014**: The extension MUST function with zero configuration — installing it and running the workflow MUST produce per-step summaries and reports using default settings alone.
 - **FR-015**: A failure in cost tracking (estimation, recording, or display) MUST NOT block, fail, or interrupt the primary spec-kit workflow step. When a failure occurs, the extension MUST print exactly one warning line to stderr in the format `⚠️  speckit-cost: <reason> — entry skipped` and omit the ledger entry for that step. No entry with partial or error data is written to the ledger.

@@ -22,6 +22,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `git` extension installed (`speckit.git.*` commands)
 - `brownfield` extension installed (`speckit.brownfield.*` commands)
 - Code knowledge graph built (`.code-review-graph/`)
+- Analysis findings resolved across spec.md and tasks.md:
+  - FR-012: `manual` provider fully scoped; `log-file` v1.1 stub documented
+  - T009/T010: all three provider branches explicitly described
+  - T014/SC-005: concrete grep-based manifest wiring assertion
+  - T015: §II mktemp transient-write compliance note added
+  - Terminology: "spec session" normalized to "spec" throughout spec.md
 - `specs/001-cost-tracking-per-step/plan.md` — implementation plan:
   - Extension file structure (`extension.yml`, `commands/`, `scripts/bash/`)
   - Data model: Cost Entry schema v1 (verbatim from constitution §IV)
