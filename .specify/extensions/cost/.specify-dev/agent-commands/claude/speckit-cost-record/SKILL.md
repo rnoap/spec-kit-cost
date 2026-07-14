@@ -1,5 +1,10 @@
 ---
-description: "Compute and record the cost of the just-completed workflow step."
+name: speckit-cost-record
+description: Compute and record the cost of the just-completed workflow step.
+compatibility: Requires spec-kit project structure with .specify/ directory
+metadata:
+  author: github-spec-kit
+  source: cost:commands/speckit.cost.record.md
 ---
 
 # Record Step Cost
@@ -15,7 +20,7 @@ This command is invoked as an `after_*` hook by spec-kit. It:
    (e.g., if called as `after_specify`, the step is `after_specify`).
 2. Resolves the active provider: `SPECKIT_COST_PROVIDER` env → `cost-config.yml` → `self-report`.
 3. Gathers token count inputs based on the active provider (see Provider Branches below).
-4. Invokes `bash scripts/bash/record-cost.sh` with the gathered inputs.
+4. Invokes `bash .specify/extensions/cost/scripts/bash/record-cost.sh` with the gathered inputs.
 5. Presents the script's stdout output — one `💰` summary line — to the developer.
 6. Does **not** suppress stderr (warnings about skipped entries appear as-is).
 
@@ -79,7 +84,7 @@ Use the number of characters as `<IN_CHARS>` and `<OUT_CHARS>` respectively.
 
 Run:
 ```bash
-bash scripts/bash/record-cost.sh \
+bash .specify/extensions/cost/scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
   --model <MODEL_ID> \
   --in-chars <IN_CHARS> \
@@ -100,7 +105,7 @@ Wait for the developer's response. Use the supplied values as `<IN_TOKENS>` and 
 
 Run:
 ```bash
-bash scripts/bash/record-cost.sh \
+bash .specify/extensions/cost/scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
   --model <MODEL_ID> \
   --provider manual \
@@ -112,7 +117,7 @@ bash scripts/bash/record-cost.sh \
 
 Run (the script emits a non-blocking warning; the entry is skipped in v1.0.0):
 ```bash
-bash scripts/bash/record-cost.sh \
+bash .specify/extensions/cost/scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
   --model <MODEL_ID> \
   --provider log-file
