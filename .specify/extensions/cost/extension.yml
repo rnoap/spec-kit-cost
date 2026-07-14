@@ -38,36 +38,36 @@ provides:
 hooks:
   after_specify:
     command: speckit.cost.record
-    optional: true
+    optional: false
     description: "Record cost after spec creation step"
   after_clarify:
     command: speckit.cost.record
-    optional: true
+    optional: false
     description: "Record cost after spec clarification step"
   after_plan:
     command: speckit.cost.record
-    optional: true
+    optional: false
     description: "Record cost after implementation planning step"
   after_tasks:
     command: speckit.cost.record
-    optional: true
+    optional: false
     description: "Record cost after task generation step"
   after_analyze:
     command: speckit.cost.record
-    optional: true
+    optional: false
     description: "Record cost after spec analysis step"
   after_checklist:
     command: speckit.cost.record
-    optional: true
+    optional: false
     description: "Record cost after checklist generation step"
   # after_implement fires two commands in sequence: record cost first, then
   # auto-display the full cumulative breakdown (FR-007, SC-005).
   after_implement:
     - command: speckit.cost.record
-      optional: true
+      optional: false
       description: "Record cost after implementation step"
     - command: speckit.cost.report
-      optional: true
+      optional: false
       description: "Display cumulative cost breakdown after implementation completes"
 
 tags:
