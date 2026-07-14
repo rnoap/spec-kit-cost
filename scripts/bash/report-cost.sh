@@ -22,9 +22,11 @@ source "${SCRIPT_DIR}/lib/catalog.sh"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 spec_override=""
+model_override=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --spec) spec_override="$2"; shift 2 ;;
+    --spec)  spec_override="$2";  shift 2 ;;
+    --model) model_override="$2"; shift 2 ;;
     *) shift ;;
   esac
 done
@@ -133,9 +135,12 @@ for entry in "${entries[@]}"; do
   entry_model="$(jsonl_get_field model "$entry")"
   [[ -z "$entry_model" ]] && entry_model="unknown"
 
+  # --model flag overrides per-entry model for rate resolution (what-if repricing)
+  rate_model="${model_override:-$entry_model}"
+
   # T013: recompute cost from token counts + model rates (ignore stored cost_usd)
-  input_rate_M="$(resolve_input_rate "$entry_model")"
-  output_rate_M="$(resolve_output_rate "$entry_model")"
+  input_rate_M="$(resolve_input_rate "$rate_model")"
+  output_rate_M="$(resolve_output_rate "$rate_model")"
   cost_raw="$(awk -v i="$in_tok" -v o="$out_tok" \
                   -v ir="$input_rate_M" -v or_="$output_rate_M" \
     'BEGIN { printf "%.6f", (i * ir / 1000000) + (o * or_ / 1000000) }')"

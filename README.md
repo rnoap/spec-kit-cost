@@ -26,6 +26,39 @@ specify extension add cost \
 
 Requires spec-kit `>= 0.4.0`.
 
+## AI Assistant Setup
+
+When an AI coding assistant executes spec-kit commands, it must **run** the hook
+scripts — not just list them. Some assistants (GitHub Copilot, Cursor, older Wibey
+versions) need an explicit instruction to do this.
+
+Add the following block to your project's `AGENTS.md` (or equivalent AI context file,
+e.g. `.cursorrules`, GitHub Copilot instructions):
+
+```markdown
+### spec-kit cost hooks — execute mandatory hooks
+
+When a spec-kit skill finishes and lists `after_*` hooks, any hook with `optional: false`
+MUST be executed directly. `EXECUTE_COMMAND: <command>` is a GUI signal; in AI-agent mode
+the AI model is the executor.
+
+For `speckit.cost.record` (always `optional: false`), run:
+
+    bash .specify/extensions/cost/scripts/bash/record-cost.sh \
+      --step <event_name> \
+      --model <MODEL_ID> \
+      --in-chars <IN_CHARS> \
+      --out-chars <OUT_CHARS>
+
+where `<IN_CHARS>` and `<OUT_CHARS>` are **character counts** of the step's input and
+output content. The script applies the `chars ÷ 4` heuristic internally.
+After execution, relay the 💰 summary line verbatim in your response text.
+
+> ⚠️ Never pass character counts into `--in-tokens`/`--out-tokens` — those flags bypass
+> the ÷4 heuristic and inflate estimates by ~4×. Use `--in-tokens`/`--out-tokens` only
+> when you have real token counts (e.g. `--provider manual` with dashboard values).
+```
+
 ## Quick Start (Zero-Config)
 
 Install the extension and run any spec-kit workflow step. After each step you'll

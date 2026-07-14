@@ -91,6 +91,11 @@ bash .specify/extensions/cost/scripts/bash/record-cost.sh \
   --out-chars <OUT_CHARS>
 ```
 
+> ⚠️ **Flag correctness**: Always pass **character counts** to `--in-chars`/`--out-chars`.
+> The script applies the `chars ÷ 4` heuristic internally to produce token estimates.
+> Never pass character counts into `--in-tokens`/`--out-tokens` — those flags bypass
+> the heuristic and inflate estimates by ~4×, making entries non-comparable across steps.
+
 **`manual`**
 
 Ask the developer:
@@ -118,9 +123,14 @@ bash .specify/extensions/cost/scripts/bash/record-cost.sh \
   --provider log-file
 ```
 
-### Step 4 — Present output
+### Step 4 — Present output (MANDATORY)
 
-Display the script's stdout to the developer. The inline summary format is:
+**MANDATORY**: After the script exits, relay its stdout verbatim as a visible line
+in your response text. This hook is not complete until the 💰 line appears in your
+response — it is not sufficient for it to appear only in a tool-call log or collapsed
+tool output that the developer may not see.
+
+The inline summary format is:
 ```
 💰 <step>: ~N in / ~N out tokens ≈ $N.NNNN
 ```

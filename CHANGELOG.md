@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-07-14
+
+### Added
+- `README.md` — new **AI Assistant Setup** section with the AGENTS.md snippet that
+  consuming projects must add to ensure mandatory hooks (`optional: false`) are
+  executed by AI agents (GitHub Copilot, Cursor, Wibey) rather than merely listed.
+
+### Changed
+- `commands/speckit.cost.record.md` — Step 4 now carries a `(MANDATORY)` marker
+  with explicit instruction: relay the 💰 line in response text, not only in
+  tool-call logs that developers may not see.
+- `commands/speckit.cost.record.md` — self-report branch: added inline warning
+  clarifying that `--in-chars`/`--out-chars` accept **character counts** (÷4
+  applied by the script) and that passing character counts into `--in-tokens` bypasses
+  the heuristic and inflates estimates by ~4×.
+
+### Fixed
+- Documented correct flag usage to prevent AI assistants from using `--in-tokens`
+  with character counts under the `self-report` provider, which produced
+  non-comparable ledger entries across steps.
+- `scripts/bash/report-cost.sh` — added `--model <id>` flag for what-if repricing:
+  when supplied, overrides the per-entry model used for rate resolution, allowing
+  cost recomputation at a different model's rates without modifying ledger data.
+
 ## [1.2.1] - 2026-07-14
 
 ### Changed
@@ -133,7 +157,9 @@ Link definitions (update on each release):
   [X.Y.Z]: https://github.com/rnoap/spec-kit-cost/compare/vA.B.C...vX.Y.Z
 -->
 
-[Unreleased]: https://github.com/rnoap/spec-kit-cost/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/rnoap/spec-kit-cost/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/rnoap/spec-kit-cost/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/rnoap/spec-kit-cost/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.0.0...v1.0.0
