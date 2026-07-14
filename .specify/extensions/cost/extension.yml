@@ -3,10 +3,13 @@ schema_version: "1.0"
 extension:
   id: cost
   name: "spec-kit-cost"
-  version: "1.2.0"
+  version: "1.2.1"
   description: >
-    Tracks estimated LLM token cost per spec-kit workflow step, appends an
-    append-only USD ledger, and reports a cumulative per-spec breakdown.
+    Tracks LLM token cost per spec-kit workflow step across any AI coding
+    assistant (Wibey, GitHub Copilot, Cursor, etc.). Auto-detects the active
+    model and applies per-model input/output rates from a built-in catalog
+    covering Claude, OpenAI, and Google Gemini. Appends an append-only USD
+    ledger and reports a cumulative per-spec breakdown with running totals.
   author: rnoap
   repository: https://github.com/rnoap/spec-kit-cost
   license: MIT

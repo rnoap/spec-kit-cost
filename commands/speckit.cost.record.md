@@ -33,6 +33,38 @@ Check `SPECKIT_COST_PROVIDER` environment variable first.
 If unset, read `provider` from `.specify/extensions/cost/cost-config.yml`.
 If absent, use `self-report` (default).
 
+### Step 3a — Detect active model (FR-002)
+
+This extension runs on any AI coding assistant (Wibey, GitHub Copilot, Cursor, etc.).
+Identify the canonical API model ID using whichever signal is available, in this order:
+
+**1. Harness injection (Wibey / Claude Code)**
+Look for a line matching `Current model: <Display Name> (<model-id>)` in your session
+context. Extract the model ID from the parenthetical:
+`Current model: Claude Sonnet 4 (claude-sonnet-4-6)` → `claude-sonnet-4-6`
+
+**2. Host agent context (GitHub Copilot, Cursor, others)**
+Look for any explicit model identifier in your system prompt or context provided by
+the host agent. Common formats: `Model: gpt-5.4`, `Using model: gemini-2.5-pro`,
+or a model field in the agent's instructions.
+
+**3. Self-identification**
+You know what model you are. Use the canonical API model ID — not the display name.
+Examples:
+- Claude Sonnet 4.6 → `claude-sonnet-4-6`
+- GPT-5.4 → `gpt-5.4`
+- Gemini 2.5 Pro → `gemini-2.5-pro`
+
+Cross-reference with `.specify/extensions/cost/model-catalog.txt` to confirm the
+exact ID string that will match a catalog entry.
+
+**4. Fallback**
+Read `model` from `.specify/extensions/cost/cost-config.yml`. If absent or `unknown`,
+use `unknown` (triggers a warning and applies the blended fallback rate).
+
+Store the result as `<MODEL_ID>` and include `--model <MODEL_ID>` in every script
+invocation below.
+
 ### Step 3 — Provider branch: gather inputs
 
 **`self-report` (default)**
@@ -49,6 +81,7 @@ Run:
 ```bash
 bash scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
+  --model <MODEL_ID> \
   --in-chars <IN_CHARS> \
   --out-chars <OUT_CHARS>
 ```
@@ -64,6 +97,7 @@ Run:
 ```bash
 bash scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
+  --model <MODEL_ID> \
   --provider manual \
   --in-tokens <IN_TOKENS> \
   --out-tokens <OUT_TOKENS>
@@ -75,6 +109,7 @@ Run (the script emits a non-blocking warning; the entry is skipped in v1.0.0):
 ```bash
 bash scripts/bash/record-cost.sh \
   --step <STEP_NAME> \
+  --model <MODEL_ID> \
   --provider log-file
 ```
 

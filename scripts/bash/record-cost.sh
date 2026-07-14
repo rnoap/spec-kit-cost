@@ -21,6 +21,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/json.sh"
 # shellcheck source=lib/config.sh
 source "${SCRIPT_DIR}/lib/config.sh"
+# shellcheck source=lib/catalog.sh
+source "${SCRIPT_DIR}/lib/catalog.sh"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 step=""
@@ -29,6 +31,7 @@ out_chars=""
 in_tokens=""
 out_tokens=""
 provider_override=""
+model_override=""
 note=""
 
 while [[ $# -gt 0 ]]; do
@@ -39,6 +42,7 @@ while [[ $# -gt 0 ]]; do
     --in-tokens)   in_tokens="$2";         shift 2 ;;
     --out-tokens)  out_tokens="$2";        shift 2 ;;
     --provider)    provider_override="$2"; shift 2 ;;
+    --model)       model_override="$2";    shift 2 ;;
     --note)        note="$2";              shift 2 ;;
     *) shift ;;
   esac
@@ -81,13 +85,52 @@ provider="${provider_override:-${SPECKIT_COST_PROVIDER:-}}"
 [[ -z "$provider" ]] && provider="$(config_get provider)"
 [[ -z "$provider" ]] && provider="self-report"
 
-# ── Config values (CR-R2) ────────────────────────────────────────────────────
+# ── Active model resolution (FR-002) ─────────────────────────────────────────
+# Precedence: --model flag (harness-detected by AI command) → config label → "unknown"
+active_model="${model_override:-$(config_get model)}"
+[[ -z "$active_model" ]] && active_model="unknown"
+
+# ── Config rate values (FR-004, CR-R2) ───────────────────────────────────────
+# Read optional per-type override keys (return "" when absent — no defaults here).
+cfg_input_rate_per_1k="$(config_get_input_rate_per_1k)"
+cfg_output_rate_per_1k="$(config_get_output_rate_per_1k)"
+# Legacy blended fallback.
 price_per_1k="$(config_get price_per_1k)"
 [[ -z "$price_per_1k" ]] && price_per_1k="0.003"
-# Validate price_per_1k is numeric before awk (FIXED high: awk injection via config).
 [[ "$price_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]] || price_per_1k="0.003"
-model="$(config_get model)"
-[[ -z "$model" ]] && model="unknown"
+
+# ── Catalog lookup for detected model (FR-003, FR-005) ────────────────────────
+catalog_rates="$(catalog_get_rates "$active_model")"
+catalog_in=""
+catalog_out=""
+if [[ -n "$catalog_rates" ]]; then
+  catalog_in="$(printf '%s' "$catalog_rates" | cut -d'|' -f1)"
+  catalog_out="$(printf '%s' "$catalog_rates" | cut -d'|' -f2)"
+elif [[ "$active_model" != "unknown" ]]; then
+  # FR-005: emit non-fatal warning for unrecognized models; do not fail.
+  printf '⚠️  speckit-cost: model "%s" not found in catalog — using fallback rate\n' \
+    "$active_model" >&2
+fi
+
+# ── FR-004 rate resolution — per-M (USD per million tokens) ──────────────────
+# Priority per token type: config override → catalog → blended price_per_1k → default.
+# Config values are per-1K; multiply ×1000 to convert to per-M.
+# Rate resolution — same ladder also in report-cost.sh. Update both if FR-004 changes.
+if [[ -n "$cfg_input_rate_per_1k" && "$cfg_input_rate_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+  input_rate_M="$(awk -v r="$cfg_input_rate_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
+elif [[ -n "$catalog_in" ]]; then
+  input_rate_M="$catalog_in"
+else
+  input_rate_M="$(awk -v r="$price_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
+fi
+
+if [[ -n "$cfg_output_rate_per_1k" && "$cfg_output_rate_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+  output_rate_M="$(awk -v r="$cfg_output_rate_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
+elif [[ -n "$catalog_out" ]]; then
+  output_rate_M="$catalog_out"
+else
+  output_rate_M="$(awk -v r="$price_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
+fi
 
 # ── Spec identifier from feature context (CR-R3, FR-004) ─────────────────────
 feature_json=".specify/feature.json"
@@ -143,11 +186,12 @@ esac
 [[ "$in_tokens"  =~ ^[0-9]+$ ]] || _fail "input_tokens must be a non-negative integer"
 [[ "$out_tokens" =~ ^[0-9]+$ ]] || _fail "output_tokens must be a non-negative integer"
 
-# ── Cost computation (CR-R4, R2) ─────────────────────────────────────────────
-# FIXED (high): use awk -v to pass all values — prevents shell injection,
-# and || _fail ensures FR-015 non-blocking contract under set -euo pipefail.
-cost_usd="$(awk -v i="$in_tokens" -v o="$out_tokens" -v p="$price_per_1k" \
-  'BEGIN { printf "%.6f", (i + o) / 1000 * p }')" \
+# ── Cost computation — per-M formula (FR-003, FR-004) ────────────────────────
+# cost = (input_tokens × input_rate_M / 1_000_000) + (output_tokens × output_rate_M / 1_000_000)
+# awk -v flags prevent shell injection; || _fail satisfies FR-011 non-blocking contract.
+cost_usd="$(awk -v i="$in_tokens" -v o="$out_tokens" \
+               -v ir="$input_rate_M" -v or_="$output_rate_M" \
+  'BEGIN { printf "%.6f", (i * ir / 1000000) + (o * or_ / 1000000) }')" \
   || _fail "could not compute cost_usd"
 
 # ── Ledger directory and file (CR-R5, §II) ───────────────────────────────────
@@ -162,7 +206,7 @@ record="$(jsonl_emit \
   --provider      "$provider" \
   --input_tokens  "$in_tokens" \
   --output_tokens "$out_tokens" \
-  --model         "$model" \
+  --model         "$active_model" \
   --cost_usd      "$cost_usd" \
   --note          "$note")" \
   || _fail "could not assemble JSONL record"

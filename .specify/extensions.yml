@@ -107,7 +107,7 @@ hooks:
   - extension: cost
     command: speckit.cost.record
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.record?
     description: Record cost after spec creation step
@@ -124,7 +124,7 @@ hooks:
   - extension: cost
     command: speckit.cost.record
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.record?
     description: Record cost after spec clarification step
@@ -141,7 +141,7 @@ hooks:
   - extension: cost
     command: speckit.cost.record
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.record?
     description: Record cost after implementation planning step
@@ -158,7 +158,7 @@ hooks:
   - extension: cost
     command: speckit.cost.record
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.record?
     description: Record cost after task generation step
@@ -175,7 +175,7 @@ hooks:
   - extension: cost
     command: speckit.cost.record
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.record?
     description: Record cost after implementation step
@@ -183,7 +183,7 @@ hooks:
   - extension: cost
     command: speckit.cost.report
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.report?
     description: Display cumulative cost breakdown after implementation completes
@@ -200,7 +200,7 @@ hooks:
   - extension: cost
     command: speckit.cost.record
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.record?
     description: Record cost after checklist generation step
@@ -217,7 +217,7 @@ hooks:
   - extension: cost
     command: speckit.cost.record
     enabled: true
-    optional: true
+    optional: false
     priority: 10
     prompt: Execute speckit.cost.record?
     description: Record cost after spec analysis step

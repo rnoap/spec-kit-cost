@@ -37,9 +37,9 @@
       "installed_at": "2026-07-13T16:34:46.860665+00:00"
     },
     "cost": {
-      "version": "1.0.0",
+      "version": "1.2.1",
       "source": "local",
-      "manifest_hash": "sha256:451afccbe955a686a0745cabeff1a778ad1af8f45bcde11b860a27615d5acf06",
+      "manifest_hash": "sha256:3b90151d2c98b402db9f635e29252ca9a44b5ef559c9808e412469e042f923da",
       "enabled": true,
       "priority": 10,
       "registered_commands": {
@@ -50,7 +50,7 @@
         ]
       },
       "registered_skills": [],
-      "installed_at": "2026-07-13T18:26:34.868593+00:00"
+      "installed_at": "2026-07-14T13:28:58.109671+00:00"
     }
   }
 }

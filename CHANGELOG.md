@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-07-14
+
+### Changed
+- `AGENTS.md` — added critical warning: this repository is the extension source; AI agents
+  must never edit `.specify/extensions/cost/` directly (tool-managed local install).
+- `.specify/memory/constitution.md` — added Development Workflow rule 7 prohibiting
+  implementation inside the spec-kit local install directory; bumped constitution to 1.1.0.
+
+### Fixed
+- Implementation files for spec `002-improve-cost-accuracy` (`catalog.sh`, `model-catalog.txt`,
+  updated `config.sh`, `record-cost.sh`, `report-cost.sh`, `commands/speckit.cost.record.md`,
+  `config-template.yml`) were previously applied to `.specify/extensions/cost/` instead of the
+  repository root. Files migrated to root; `.specify/extensions/cost/` reinstalled from root via
+  `specify extension add --dev --force` to restore a clean tool-managed state.
+
 ## [1.2.0] - 2026-07-14
 
 ### Added
