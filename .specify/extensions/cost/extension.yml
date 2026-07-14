@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: cost
   name: "spec-kit-cost"
-  version: "1.1.0"
+  version: "1.2.0"
   description: >
     Tracks estimated LLM token cost per spec-kit workflow step, appends an
     append-only USD ledger, and reports a cumulative per-spec breakdown.

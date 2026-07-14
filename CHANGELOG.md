@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-14
+
+### Added
+- `model-catalog.txt` — expanded from 17 to 34 entries: added 7 Google Gemini models (`gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-3-flash-preview`, `gemini-3.1-pro-preview`, `gemini-3.1-flash-lite`, `gemini-3.5-flash`), verified from ai.google.dev/pricing 2026-07-14.
+- `model-catalog.txt` — OpenAI additions: `gpt-5.3-codex` (1.75/14), `gpt-5-mini` (0.75/4.5, assumed — not on public API pricing page), `o3-deep-research`, `o4-mini-deep-research`.
+- `model-catalog.txt` — Claude additions: `claude-opus-4-7`, `claude-opus-4-5`, `claude-haiku-4-5` short alias, `claude-sonnet-4-5` short alias.
+
+### Changed
+- `commands/speckit.cost.record.md` — Step 3a model detection is now **agent-agnostic**: tries 4 signals in order (Wibey/Claude Code harness injection → host agent context → AI self-identification → config fallback). Extension now works correctly with GitHub Copilot, Cursor, and any other AI coding assistant in addition to Wibey.
+- `extension.yml` — updated catalog description to reflect multi-provider coverage (Claude + OpenAI + Gemini); removed incorrect "Wibey-only" annotation.
+
 ## [1.1.0] - 2026-07-13
 
 ### Added
@@ -107,6 +118,7 @@ Link definitions (update on each release):
   [X.Y.Z]: https://github.com/rnoap/spec-kit-cost/compare/vA.B.C...vX.Y.Z
 -->
 
-[Unreleased]: https://github.com/rnoap/spec-kit-cost/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/rnoap/spec-kit-cost/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/rnoap/spec-kit-cost/compare/v1.0.0...v1.0.0
