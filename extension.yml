@@ -3,10 +3,13 @@ schema_version: "1.0"
 extension:
   id: cost
   name: "spec-kit-cost"
-  version: "1.0.0"
+  version: "1.2.0"
   description: >
-    Tracks estimated LLM token cost per spec-kit workflow step, appends an
-    append-only USD ledger, and reports a cumulative per-spec breakdown.
+    Tracks LLM token cost per spec-kit workflow step across any AI coding
+    assistant (Wibey, GitHub Copilot, Cursor, etc.). Auto-detects the active
+    model and applies per-model input/output rates from a built-in catalog
+    covering Claude, OpenAI, and Google Gemini. Appends an append-only USD
+    ledger and reports a cumulative per-spec breakdown with running totals.
   author: rnoap
   repository: https://github.com/rnoap/spec-kit-cost
   license: MIT
@@ -30,6 +33,9 @@ provides:
     - name: "cost-config.yml"
       template: "config-template.yml"
       description: "Cost tracking configuration (provider, price, model label)"
+      required: false
+    - name: "model-catalog.txt"
+      description: "Pre-populated model price catalog covering Claude, OpenAI, and Google Gemini models (model-id|input_per_M_USD|output_per_M_USD). Edit to add/update prices — no script changes needed."
       required: false
 
 hooks:
@@ -77,5 +83,7 @@ tags:
 config:
   defaults:
     provider: self-report
-    price_per_1k: 0.003
-    model: unknown
+    price_per_1k: 0.003       # legacy blended fallback; catalog takes priority for known models
+    model: unknown             # deprecated as pricing input; use harness-detected model via --model
+    input_rate_per_1k: null   # absent by default; set to override catalog input rate for all models
+    output_rate_per_1k: null  # absent by default; set to override catalog output rate for all models
