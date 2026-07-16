@@ -4,6 +4,15 @@
   "branch": "002-improve-cost-accuracy",
   "selectedAt": "2026-07-13T22:21:47.445Z",
   "currentStep": "specify",
-  "status": "draft",
-  "history": []
+  "status": "completed",
+  "history": [
+    {
+      "step": "specify",
+      "substep": null,
+      "kind": "complete",
+      "by": "extension",
+      "at": "2026-07-16T16:24:20.008Z"
+    }
+  ],
+  "telemetryInstanceId": "bc09624c-807d-4a1d-848f-d7756ec7f85a"
 }

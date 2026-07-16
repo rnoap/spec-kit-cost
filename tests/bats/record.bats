@@ -208,3 +208,105 @@ teardown() {
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -q '\$0\.0045'
 }
+
+# ── Cache-aware pricing (User Story 1, 004-measured-token-usage) ─────────────
+
+@test "US1: explicit 5-field catalog cache rates override derivation (quickstart Scenario 4)" {
+  mkdir -p .specify/extensions/cost
+  cat > .specify/extensions/cost/model-catalog.txt <<'EOF'
+cachey|10|40|1|12.5
+EOF
+  # fresh=500000 -> (500000*10 + 1000000*1 + 500000*12.5 + 100000*40)/1e6 = 16.2500
+  run bash "$RECORD_SCRIPT" --step after_plan --model cachey \
+    --in-tokens 2000000 --cache-read-tokens 1000000 --cache-write-tokens 500000 \
+    --out-tokens 100000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$16\.2500'
+}
+
+@test "US1: derived cache-read default (0.10x resolved input rate) — quickstart Scenario 3" {
+  # No catalog match (unknown model) -> split default input rate $3/M -> cache-read 0.30/M.
+  # fresh=0 -> cost = 1000000 * 0.30 / 1e6 = 0.3000
+  run bash "$RECORD_SCRIPT" --step after_plan \
+    --in-tokens 1000000 --cache-read-tokens 1000000 --out-tokens 0
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.3000'
+}
+
+@test "US1: verified reference session reprices to \$2.6031, not the naive \$13.4309 (quickstart Scenario 1)" {
+  stub_catalog
+  run bash "$RECORD_SCRIPT" --step after_plan --model claude-sonnet-4-6 \
+    --in-tokens 4228197 --out-tokens 49756 --cache-read-tokens 4010305 \
+    --source measured
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$2\.6031'
+  ! printf '%s\n' "$output" | grep -q '\$13\.4309'
+}
+
+@test "US1: anomaly floor when cache counts exceed input total — prices cache-only and notes the anomaly (quickstart Scenario 5)" {
+  run bash "$RECORD_SCRIPT" --step after_plan \
+    --in-tokens 100 --cache-read-tokens 150 --out-tokens 0
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '(150 cached)'
+  grep -q 'anomaly: cache counts exceed input total' .specify/extensions/cost/cost-ledger.jsonl
+}
+
+@test "US1: cache flags are rejected as ambiguous when combined with char mode (quickstart Scenario 6)" {
+  run bash "$RECORD_SCRIPT" --step after_plan --in-chars 400 --cache-read-tokens 10
+  [ "$status" -eq 0 ]
+  [ ! -f .specify/extensions/cost/cost-ledger.jsonl ]
+}
+
+@test "US1: ledger emits cache_read_tokens/cache_write_tokens only when > 0, and source only when measured" {
+  run bash "$RECORD_SCRIPT" --step after_plan \
+    --in-tokens 1000000 --cache-read-tokens 1000000 --out-tokens 0 --source measured
+  [ "$status" -eq 0 ]
+  local record
+  record="$(cat .specify/extensions/cost/cost-ledger.jsonl)"
+  printf '%s' "$record" | grep -q '"cache_read_tokens":1000000'
+  ! printf '%s' "$record" | grep -q 'cache_write_tokens'
+  printf '%s' "$record" | grep -q '"source":"measured"'
+}
+
+@test "US1: legacy invocation omits cache and source fields from the ledger entirely" {
+  run bash "$RECORD_SCRIPT" --step after_plan --in-tokens 1000 --out-tokens 500
+  [ "$status" -eq 0 ]
+  local record
+  record="$(cat .specify/extensions/cost/cost-ledger.jsonl)"
+  ! printf '%s' "$record" | grep -q 'cache_read_tokens'
+  ! printf '%s' "$record" | grep -q 'cache_write_tokens'
+  ! printf '%s' "$record" | grep -q '"source"'
+}
+
+@test "US1: inline summary composes '(N cached)' and '[measured]' segments" {
+  stub_catalog
+  run bash "$RECORD_SCRIPT" --step after_plan --model claude-sonnet-4-6 \
+    --in-tokens 4228197 --out-tokens 49756 --cache-read-tokens 4010305 \
+    --source measured
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qE '^💰 plan: ~4228197 in \(4010305 cached\) / ~49756 out tokens ≈ \$2\.6031 \[measured\]$'
+}
+
+# ── Byte-identity regression (User Story 3 — unchanged legacy behavior) ──────
+
+@test "US3: legacy char-mode invocation is byte-identical to v1.3.0 (summary + ledger shape, quickstart Scenario 2)" {
+  run bash "$RECORD_SCRIPT" --step after_specify --in-chars 4000 --out-chars 2000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qE '^💰 specify: ~1000 in / ~500 out tokens ≈ \$0\.0105$'
+  local record
+  record="$(cat .specify/extensions/cost/cost-ledger.jsonl)"
+  ! printf '%s' "$record" | grep -q 'cache_read_tokens'
+  ! printf '%s' "$record" | grep -q 'cache_write_tokens'
+  ! printf '%s' "$record" | grep -q '"source"'
+}
+
+@test "US3: legacy token-mode invocation is byte-identical to v1.3.0 (summary + ledger shape)" {
+  run bash "$RECORD_SCRIPT" --step after_plan --provider manual --in-tokens 1000 --out-tokens 500
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qE '^💰 plan: ~1000 in / ~500 out tokens ≈ \$0\.0105$'
+  local record
+  record="$(cat .specify/extensions/cost/cost-ledger.jsonl)"
+  ! printf '%s' "$record" | grep -q 'cache_read_tokens'
+  ! printf '%s' "$record" | grep -q 'cache_write_tokens'
+  ! printf '%s' "$record" | grep -q '"source"'
+}

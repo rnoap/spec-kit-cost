@@ -11,6 +11,10 @@ a cumulative per-spec breakdown.
 - 🔒 **Append-only ledger** — entries are never modified, only appended
 - 🔌 **Zero-config** — works out of the box with sensible defaults
 - 🛠 **Pluggable providers** — `self-report` (default), `manual`, `log-file` (v1.1)
+- 🎯 **Measured token usage** — on hosts with a session-store query tool (VS Code
+  Copilot today), records real token/cache counts instead of estimates
+- 💾 **Cache-aware pricing** — prices cache-read/cache-write tokens at their own
+  rates instead of the full input rate
 - 🐚 **Shell-first** — pure POSIX bash, no runtime dependencies
 
 ## Installation
@@ -84,6 +88,13 @@ After the `implement` step, a full breakdown is shown automatically:
 **Total: $0.0420** (5 step(s))
 ```
 
+On hosts where real usage is available (see [Measured Token Usage](#measured-token-usage-v14)),
+summaries and reports show cache-read/cache-write breakdowns and a source marker:
+
+```
+💰 plan: ~4228197 in (4010305 cached) / ~49756 out tokens ≈ $2.6031 [measured]
+```
+
 ## Commands
 
 | Command | Description |
@@ -148,6 +159,72 @@ accuracy.
 Parse a provider-specific usage log file to extract exact token counts. In v1.0.0
 this provider emits a non-blocking warning and skips the entry.
 
+## Measured Token Usage (v1.4)
+
+When `provider` is `self-report` (the default), the AI agent follows a three-rung
+degradation ladder, always preferring the most accurate source available and
+falling back silently — never blocking or warning the developer — when a rung is
+unavailable:
+
+1. **Measured session-store usage** — if the host exposes a session-store query
+   tool, the agent aggregates real input/output/cache token counts for the
+   current step directly from the store and records with `source: measured`.
+2. **Host-reported usage totals** — a usage/billing panel, session token counter,
+   or API usage metadata exposed by the host agent.
+3. **`chars ÷ 4` heuristic** — always available; the original v1.0.0 behavior.
+
+### Host compatibility
+
+| Host | Rung 1 (measured) | Rung 2/3 (fallback) |
+|------|:---:|:---:|
+| GitHub Copilot (VS Code) | ✅ session-store SQL tool | ✅ |
+| Wibey | — | ✅ |
+| Cursor | — | ✅ |
+| Claude Code | — | ✅ |
+| Other agents | — | ✅ |
+
+On hosts without a session-store query tool, behavior and output are **byte-identical**
+to v1.3.0 — this feature only adds capability, it never changes existing behavior.
+
+### Known limitation
+
+In-flight (currently open) sessions are not indexed by the store even after a
+reindex — only closed or resumed sessions have queryable usage data. Measured mode
+therefore commonly falls back to Rung 2/3 during a live session and succeeds once
+the session has been closed and reopened. This is expected and never surfaced as
+an error.
+
+## Cache-Aware Pricing (v1.4)
+
+Many providers charge separately for **cache-read** and **cache-write** tokens at
+rates lower/higher than fresh input tokens. `model-catalog.txt` supports two
+optional trailing columns for these rates:
+
+```
+# model-id|input_per_M_USD|output_per_M_USD[|cache_read_per_M_USD[|cache_write_per_M_USD]]
+claude-sonnet-4-6|3|15|0.3|3.75
+```
+
+When a model omits the cache columns, rates are derived from its input rate:
+**cache-read = 0.10×** input rate, **cache-write = 1.25×** input rate. Cost is
+computed as:
+
+$$
+\text{cost} = \frac{\text{fresh\_in} \times r_{in} + \text{cache\_read} \times r_{cr} + \text{cache\_write} \times r_{cw} + \text{output} \times r_{out}}{10^6}
+$$
+
+where `fresh_in = max(0, input_tokens − cache_read_tokens − cache_write_tokens)`.
+Entries with no cache tokens price identically to v1.3.0.
+
+To record cache token counts manually (e.g. from a provider dashboard):
+
+```bash
+bash scripts/bash/record-cost.sh \
+  --step after_plan --model claude-sonnet-4-6 \
+  --in-tokens 4228197 --out-tokens 49756 \
+  --cache-read-tokens 4010305 --source measured
+```
+
 ## Ledger Format
 
 Cost entries are stored as JSON Lines at `.specify/extensions/cost/cost-ledger.jsonl`.
@@ -160,13 +237,20 @@ Each line is one record:
   "step": "after_specify",
   "spec": "001-my-feature",
   "provider": "self-report",
+  "source": "measured",
   "input_tokens": 1200,
   "output_tokens": 800,
+  "cache_read_tokens": 400,
+  "cache_write_tokens": 0,
   "model": "claude-sonnet-4",
   "cost_usd": 0.006000,
   "note": ""
 }
 ```
+
+`source`, `cache_read_tokens`, and `cache_write_tokens` are **optional, additive**
+fields (v1.4): `source` is emitted only when `"measured"`; the cache fields are
+emitted only when greater than 0. Legacy entries and readers are unaffected.
 
 The ledger is **append-only** — entries are never modified or deleted by normal
 operation. Use `speckit.cost.reset` to clear entries for a specific spec.

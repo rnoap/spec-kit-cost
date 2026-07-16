@@ -1,0 +1,17 @@
+{
+  "workflow": "speckit",
+  "specName": "Tolerant Model Matching",
+  "branch": "",
+  "currentStep": "specify",
+  "status": "completed",
+  "history": [
+    {
+      "step": "specify",
+      "substep": null,
+      "kind": "complete",
+      "by": "extension",
+      "at": "2026-07-16T16:24:21.666Z"
+    }
+  ],
+  "telemetryInstanceId": "d30340aa-9e39-4fd2-a6d0-86a833a50df6"
+}

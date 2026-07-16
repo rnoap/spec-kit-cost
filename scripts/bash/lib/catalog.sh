@@ -4,8 +4,8 @@
 # Reads .specify/extensions/cost/model-catalog.txt using only POSIX utilities.
 # Constitution §V: Shell-First, Zero Runtime Dependencies.
 #
-# Format: model-id|input_per_M_USD|output_per_M_USD
-# Rates are in USD per million tokens.
+# Format: model-id|input_per_M_USD|output_per_M_USD[|cache_read_per_M_USD[|cache_write_per_M_USD]]
+# Rates are in USD per million tokens. Cache columns (4-5) are optional.
 #
 # Rate resolution — same FR-004 ladder also in record-cost.sh and report-cost.sh.
 # Update model-catalog.txt to change prices; no changes to this file required.
@@ -14,8 +14,10 @@
 CATALOG_FILE="${SPECKIT_COST_CATALOG:-.specify/extensions/cost/model-catalog.txt}"
 
 # _catalog_rows
-# Internal: emit "id|input|output" rows with comments/blanks stripped and
-# fields trimmed. Uses awk field comparison — no regex injection possible.
+# Internal: emit "id|input|output|cache_read|cache_write" rows with
+# comments/blanks stripped and fields trimmed. Fields 4-5 are empty strings
+# when the row does not supply them (v2 format, contracts/catalog-format.md).
+# Uses awk field comparison — no regex injection possible.
 _catalog_rows() {
   [[ -f "$CATALOG_FILE" ]] || return 0
   awk -F'|' '
@@ -25,16 +27,20 @@ _catalog_rows() {
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", $1)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2)
       gsub(/^[[:space:]]+|[[:space:]]+$/, "", $3)
-      print $1 "|" $2 "|" $3
+      f4 = ""; f5 = ""
+      if (NF >= 4) { f4 = $4; gsub(/^[[:space:]]+|[[:space:]]+$/, "", f4) }
+      if (NF >= 5) { f5 = $5; gsub(/^[[:space:]]+|[[:space:]]+$/, "", f5) }
+      print $1 "|" $2 "|" $3 "|" f4 "|" f5
     }
   ' "$CATALOG_FILE" 2>/dev/null
 }
 
 # _catalog_exact_row <model_id>
-# Internal: return the "input|output" fields for an exact-ID match, or "".
+# Internal: return the "input|output|cache_read|cache_write" fields for an
+# exact-ID match, or "". Cache positions are empty strings when absent.
 _catalog_exact_row() {
   local model_id="$1"
-  _catalog_rows | awk -F'|' -v id="$model_id" '$1 == id { print $2 "|" $3; exit }'
+  _catalog_rows | awk -F'|' -v id="$model_id" '$1 == id { print $2 "|" $3 "|" $4 "|" $5; exit }'
 }
 
 # catalog_normalize_model <raw>
@@ -102,9 +108,12 @@ _catalog_validate_rate() {
 }
 
 # catalog_get_rates <model_id>
-# Returns "input_per_M|output_per_M" for the model, or "" if not found or invalid.
+# Returns "input_per_M|output_per_M|cache_read_per_M|cache_write_per_M" for the
+# model, or "" if not found or the required input/output rates are invalid.
+# Cache positions are empty strings when the row omits them or when a present
+# cache field fails validation (degrades to absent + one stderr warning per
+# contracts/catalog-format.md — the row's input/output rates remain usable).
 # Applies the catalog_resolve_model matching ladder (case/format-insensitive).
-# Emits a warning to stderr if the row exists but contains non-numeric rates.
 catalog_get_rates() {
   local model_id="$1"
   local resolved row
@@ -113,9 +122,11 @@ catalog_get_rates() {
   row="$(_catalog_exact_row "$resolved")"
   [[ -z "$row" ]] && return 0
 
-  local in_rate out_rate
+  local in_rate out_rate cache_read cache_write
   in_rate="$(printf '%s' "$row" | cut -d'|' -f1)"
   out_rate="$(printf '%s' "$row" | cut -d'|' -f2)"
+  cache_read="$(printf '%s' "$row" | cut -d'|' -f3)"
+  cache_write="$(printf '%s' "$row" | cut -d'|' -f4)"
 
   if ! _catalog_validate_rate "$in_rate" || ! _catalog_validate_rate "$out_rate"; then
     printf '⚠️  speckit-cost catalog: invalid rate for model "%s" (got "%s|%s") — skipping\n' \
@@ -123,7 +134,18 @@ catalog_get_rates() {
     return 0
   fi
 
-  printf '%s|%s' "$in_rate" "$out_rate"
+  if [[ -n "$cache_read" ]] && ! _catalog_validate_rate "$cache_read"; then
+    printf '⚠️  speckit-cost catalog: invalid cache_read rate for model "%s" (got "%s") — treating as absent\n' \
+      "$resolved" "$cache_read" >&2
+    cache_read=""
+  fi
+  if [[ -n "$cache_write" ]] && ! _catalog_validate_rate "$cache_write"; then
+    printf '⚠️  speckit-cost catalog: invalid cache_write rate for model "%s" (got "%s") — treating as absent\n' \
+      "$resolved" "$cache_write" >&2
+    cache_write=""
+  fi
+
+  printf '%s|%s|%s|%s' "$in_rate" "$out_rate" "$cache_read" "$cache_write"
 }
 
 # catalog_get_input_rate <model_id>
@@ -142,4 +164,24 @@ catalog_get_output_rate() {
   rates="$(catalog_get_rates "$1")"
   [[ -z "$rates" ]] && return 0
   printf '%s' "$rates" | cut -d'|' -f2
+}
+
+# catalog_get_cache_read_rate <model_id>
+# Returns the explicit cache_read_per_M float, or "" if absent/not in catalog
+# (caller derives 0.10x the resolved input rate — data-model.md).
+catalog_get_cache_read_rate() {
+  local rates
+  rates="$(catalog_get_rates "$1")"
+  [[ -z "$rates" ]] && return 0
+  printf '%s' "$rates" | cut -d'|' -f3
+}
+
+# catalog_get_cache_write_rate <model_id>
+# Returns the explicit cache_write_per_M float, or "" if absent/not in catalog
+# (caller derives 1.25x the resolved input rate — data-model.md).
+catalog_get_cache_write_rate() {
+  local rates
+  rates="$(catalog_get_rates "$1")"
+  [[ -z "$rates" ]] && return 0
+  printf '%s' "$rates" | cut -d'|' -f4
 }

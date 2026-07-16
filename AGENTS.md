@@ -48,7 +48,7 @@ per-spec breakdowns.
 | `commands/` | Command prompt definitions (`speckit.cost.record` / `.report` / `.reset`) |
 | `scripts/bash/` | Implementations: `record-cost.sh`, `report-cost.sh`, `reset-cost.sh` |
 | `scripts/bash/lib/` | Shared helpers: `catalog.sh`, `config.sh`, `json.sh` |
-| `model-catalog.txt` | Price catalog: `model-id\|input_per_M_USD\|output_per_M_USD` per line |
+| `model-catalog.txt` | Price catalog: `model-id\|input_per_M_USD\|output_per_M_USD[\|cache_read_per_M_USD[\|cache_write_per_M_USD]]` per line |
 | `config-template.yml` | Template for the user-facing `cost-config.yml` |
 | `tests/bats/` | bats-core suites: `record.bats`, `report.bats`, `reset.bats` |
 | `specs/` | SDD artifacts per feature |

@@ -1,0 +1,24 @@
+{
+  "workflow": "speckit",
+  "specName": "004-measured-token-usage",
+  "branch": "004-measured-token-usage",
+  "selectedAt": "2026-07-16T16:24:40.378Z",
+  "currentStep": "tasks",
+  "status": "ready-to-implement",
+  "history": [
+    {
+      "step": "plan",
+      "substep": null,
+      "kind": "start",
+      "by": "extension",
+      "at": "2026-07-16T16:44:05.614Z"
+    },
+    {
+      "step": "tasks",
+      "substep": null,
+      "kind": "start",
+      "by": "extension",
+      "at": "2026-07-16T16:51:00.743Z"
+    }
+  ]
+}
