@@ -275,5 +275,5 @@ MIT — see [LICENSE](LICENSE).
 
 ## Community Catalog
 
-To add this extension to your spec-kit catalog, submit an issue at
-[spec-kit extension submission](https://github.com/github/spec-kit/issues/new?template=extension_submission.yml).
+You can find us at [speckit-community.github.io/extensions](https://speckit-community.github.io/extensions).
+The exact URL to this plugin's listing will be added here soon.
