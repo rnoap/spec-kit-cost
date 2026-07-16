@@ -16,8 +16,9 @@ A developer supplies exact token counts to the cost recorder — from manual ent
 host usage panel, or an automated feed. In long agentic sessions the input side is
 dominated by prompt-cache reads: in a verified real session, 4.01M of 4.23M input
 tokens were cache reads. Providers bill cache reads at a small fraction of the fresh
-input rate, so pricing every input token at the full rate would report ≈ $12.68 for
-a step whose true cost is ≈ $1.85 — an overstatement of more than 5×. The extension
+input rate, so pricing every input token at the full rate would price the step's
+input side at ≈ $12.68 when its true cache-aware cost is ≈ $1.86 — a 6.8×
+overstatement (full recorded entry: ≈ $13.43 naive vs ≈ $2.60 correct). The extension
 must price fresh input, cache reads, cache writes, and output each at their own rate,
 so that exact token counts produce exact costs.
 
@@ -218,9 +219,10 @@ against the previous release — they must be indistinguishable.
   deviation), replacing the ±25%-or-worse character heuristic.
 - **SC-002**: For a step in which at least 90% of input tokens are cache reads on a
   premium model, the recorded cost is within 10% of the true provider-billed cost.
-  Reference case (verified real session): 4.23M input / 4.01M cached / 49.8K output
-  on a $3-input / $15-output model must record ≈ $1.85, not the ≈ $12.68 a naive
-  full-rate computation would produce.
+  Reference case (verified real session): 4,228,197 input / 4,010,305 cached /
+  49,756 output on a $3-input / $15-output model must record ≈ $2.60 total (input
+  side ≈ $1.86), not the ≈ $13.43 a naive full-rate computation would produce
+  ($12.68 of it on the input side).
 - **SC-003**: On hosts without measured-usage capability, observable recording
   behavior is unchanged from the previous release — same ledger record shape, same
   summary format, no new warnings — and the entire pre-existing automated test suite
