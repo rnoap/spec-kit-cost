@@ -53,21 +53,30 @@ gpt-5.4-nano|0.2|1.25
 
 ---
 
-## Lookup Algorithm (bash)
+## Lookup Algorithm
 
-```bash
-# catalog_get_rates <model_id>
-# Returns "input_per_M|output_per_M" or empty string.
-catalog_get_rates() {
-  local model_id="$1"
-  local catalog_file="${CATALOG_FILE:-.specify/extensions/cost/model-catalog.txt}"
-  [[ -f "$catalog_file" ]] || return 0
-  grep -v '^[[:space:]]*#' "$catalog_file" \
-    | grep -v '^[[:space:]]*$' \
-    | grep -m 1 "^${model_id}|" \
-    | cut -d'|' -f2-3
-}
-```
+> **Amended 2026-07-16 (v1.3.0)** — the original exact-match `grep` lookup was replaced
+> by tolerant resolution. See [specs/003-tolerant-model-matching/spec.md](../../003-tolerant-model-matching/spec.md).
+
+`catalog_get_rates <model_label>` first resolves the label via `catalog_resolve_model`,
+then returns `input_per_M|output_per_M` for the resolved ID (empty string if unresolved).
+Parsing uses `awk` field comparison (`$1 == id`) — no regex interpretation of the input.
+
+### Matching ladder (first hit wins)
+
+1. **Exact** — the label matches a catalog ID verbatim.
+2. **Normalized** — lowercase, trimmed, trailing parenthetical stripped
+   (`GPT-5.3-Codex (Preview)` → `gpt-5.3-codex`), spaces/underscores → dashes,
+   repeated dashes collapsed.
+3. **Dots → dashes** — normalized form with `.` replaced by `-`
+   (`claude-sonnet-4.6` → `claude-sonnet-4-6`).
+4. **Longest dash-boundary prefix** — the longest catalog ID that is a prefix of the
+   candidate ending at a dash boundary (`claude-opus-4-8-20260220` → `claude-opus-4-8`;
+   `gpt-5.4-mini-2026-01-01` matches `gpt-5.4-mini`, not `gpt-5.4`).
+
+Comments and blank lines are stripped and fields trimmed before comparison. Duplicate
+IDs: first line wins (rule 6). The same ladder is applied by `record-cost.sh` (which
+stores the resolved canonical ID in the ledger) and by `report-cost.sh` when repricing.
 
 ---
 

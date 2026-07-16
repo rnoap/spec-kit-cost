@@ -33,6 +33,12 @@ The catalog is a plain-text file at `.specify/extensions/cost/model-catalog.txt`
 
 Partial-prefix matching: if no exact match, try progressively shorter prefixes (first 3 dash-separated segments, then 2). Example: `claude-sonnet-4-5-20250929` → try `claude-sonnet-4` → match row `claude-sonnet-4-6` is NOT used (segments must match). Prefix fallback is a plan-phase decision: **exact match only** in v1 to avoid false positives.
 
+> **Superseded (v1.3.0, 2026-07-16)**: exact-match-only proved too strict in practice —
+> host UIs pass display labels like `GPT-5.3-Codex` that never matched. Lookup now uses
+> a tolerant ladder (exact → normalized → dots→dashes → longest dash-boundary prefix).
+> See [specs/003-tolerant-model-matching/spec.md](../003-tolerant-model-matching/spec.md)
+> and the amended [contracts/catalog-format.md](contracts/catalog-format.md).
+
 ---
 
 ## 2. Rate Resolution State

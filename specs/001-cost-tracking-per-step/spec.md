@@ -4,7 +4,12 @@
 
 **Created**: 2026-07-13
 
-**Status**: Draft
+**Status**: Implemented (v1.0.0)
+
+> **Amended by** [specs/003-tolerant-model-matching/spec.md](../003-tolerant-model-matching/spec.md)
+> (v1.3.0): the FR-002/SC-001 summary format gains an optional suffix
+> ` (fallback rate — "<model>" not in catalog)` when a *named* model misses the price
+> catalog. For matched models and the `unknown` model the original format is unchanged.
 
 **Input**: User description: "Cost tracking per workflow step with cumulative total — the extension hooks into all spec-kit lifecycle events, records token cost to an append-only ledger, shows a brief inline cost summary after each step, and displays a full cost breakdown table plus cumulative total in USD after implement (or on-demand via a report command). Provides reset and report commands. Primary data source is self-report (the AI agent estimates tokens from visible content) with a configurable price-per-1k-tokens."
 

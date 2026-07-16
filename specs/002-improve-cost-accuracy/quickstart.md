@@ -102,12 +102,14 @@ bash .specify/extensions/cost/scripts/bash/record-cost.sh \
   --model claude-unknown-9
 ```
 
-**Expected** (warning to stderr, cost uses blended fallback `price_per_1k: 0.003` = 3/M for both types):
-- Stderr: `⚠️  speckit-cost: model 'claude-unknown-9' not in catalog — using fallback rate`
-- Stdout: `💰 tasks: ~500 in / ~200 out tokens ≈ $0.0021`
+**Expected** (v1.3.0 — split fallback defaults; `price_per_1k` is no longer set by default):
+- Stderr: `⚠️  speckit-cost: model "claude-unknown-9" not found in catalog — using fallback rate. Add it to model-catalog.txt for accurate pricing.`
+- Stdout: `💰 tasks: ~500 in / ~200 out tokens ≈ $0.0045 (fallback rate — "claude-unknown-9" not in catalog)`
 
-**Verify**: `(500 × 3 / 1_000_000) + (200 × 3 / 1_000_000) = 0.0015 + 0.0006 = $0.0021` ✓
-Note: Both token types use the same blended rate because `price_per_1k` (the fallback) is a single rate applied uniformly. This is the same behavior as before the catalog was introduced.
+**Verify**: `(500 × 3 / 1_000_000) + (200 × 15 / 1_000_000) = 0.0015 + 0.0030 = $0.0045` ✓
+Note: input and output use split defaults ($3/M in, $15/M out). If `price_per_1k: 0.003` is
+*explicitly* set in `cost-config.yml`, the legacy blended behavior applies instead and the
+cost is `$0.0021`. See [specs/003-tolerant-model-matching/spec.md](../003-tolerant-model-matching/spec.md).
 
 ---
 
@@ -156,9 +158,9 @@ bash .specify/extensions/cost/scripts/bash/record-cost.sh \
   --model completely-unknown-model
 ```
 
-**Expected**: `💰 specify: ~1000 in / ~500 out tokens ≈ $0.0045`
+**Expected**: `💰 specify: ~1000 in / ~500 out tokens ≈ $0.0045 (fallback rate — "completely-unknown-model" not in catalog)`
 
-**Verify**: `(1000 + 500) × 0.003 / 1000 = $0.0045` ✓ (blended fallback)
+**Verify**: `(1000 + 500) × 0.003 / 1000 = $0.0045` ✓ (blended fallback still honored because `price_per_1k` is explicitly set; the inline marker was added in v1.3.0)
 
 ---
 

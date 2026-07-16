@@ -4,7 +4,13 @@
 
 **Created**: 2026-07-13
 
-**Status**: Draft
+**Status**: Implemented (v1.2.0)
+
+> **Amended by** [specs/003-tolerant-model-matching/spec.md](../003-tolerant-model-matching/spec.md)
+> (v1.3.0, 2026-07-16): catalog lookup is now tolerant (not exact-match-only), and the
+> final fallback rung is split $3/M input / $15/M output instead of a hardcoded blended
+> rate — `price_per_1k` participates only when explicitly set. FR-004's ladder shape is
+> unchanged; only the rung-3/4 semantics were refined.
 
 **Input**: User description: "los costos que me arroja no son muy exactos y por ejemplo si ocupo un modelo pesado como opus 4.8 los valores que me arroja se que son incorrectos ya que cuesta mucho más y los tokens que me dice que gasto se que valen mucho más. como podemos mejorar el calculo que hace nuextra extension?? también mejoremos para que la tabla de cost report muestre el total hasta el momento además del total por step"
 
