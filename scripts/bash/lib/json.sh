@@ -21,25 +21,34 @@ json_escape() {
 
 # jsonl_emit --step S --spec P --provider V --input_tokens N --output_tokens N
 #             --model M --cost_usd F [--note TEXT]
+#             [--cache_read_tokens N] [--cache_write_tokens N] [--source measured|estimated]
 # Assembles and prints one complete JSON record (schema v1) to stdout.
 # Field order matches Constitution §IV canonical example.
 # Caller is responsible for appending stdout to the ledger file.
 # FIXED (critical): guards required numeric fields; emits nothing on missing values.
 # FIXED (medium):   step and provider are now JSON-escaped before emission.
+# NEW (004-measured-token-usage): cache_read_tokens/cache_write_tokens are emitted
+# only when a non-negative integer > 0; source is emitted only when "measured".
+# Absent from a call ⇒ output is byte-identical to the pre-feature shape
+# (contracts/ledger-schema.md — additive, non-breaking).
 jsonl_emit() {
   local step="" spec="" provider="" input_tokens="" output_tokens=""
   local model="unknown" cost_usd="" note=""
+  local cache_read_tokens="" cache_write_tokens="" source=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --step)         step="$2";           shift 2 ;;
-      --spec)         spec="$2";           shift 2 ;;
-      --provider)     provider="$2";       shift 2 ;;
-      --input_tokens) input_tokens="$2";   shift 2 ;;
-      --output_tokens)output_tokens="$2";  shift 2 ;;
-      --model)        model="$2";          shift 2 ;;
-      --cost_usd)     cost_usd="$2";       shift 2 ;;
-      --note)         note="$2";           shift 2 ;;
+      --step)                step="$2";               shift 2 ;;
+      --spec)                spec="$2";                shift 2 ;;
+      --provider)            provider="$2";            shift 2 ;;
+      --input_tokens)        input_tokens="$2";        shift 2 ;;
+      --output_tokens)       output_tokens="$2";        shift 2 ;;
+      --cache_read_tokens)   cache_read_tokens="$2";   shift 2 ;;
+      --cache_write_tokens)  cache_write_tokens="$2";  shift 2 ;;
+      --source)              source="$2";              shift 2 ;;
+      --model)               model="$2";                shift 2 ;;
+      --cost_usd)            cost_usd="$2";             shift 2 ;;
+      --note)                note="$2";                 shift 2 ;;
       *) shift ;;
     esac
   done
@@ -61,9 +70,22 @@ jsonl_emit() {
   esc_model="$(json_escape "$model")"
   esc_note="$(json_escape "$note")"
 
-  printf '{"v":1,"ts":"%s","step":"%s","spec":"%s","provider":"%s","input_tokens":%s,"output_tokens":%s,"model":"%s","cost_usd":%s,"note":"%s"}\n' \
-    "$ts" "$esc_step" "$esc_spec" "$esc_provider" "$input_tokens" "$output_tokens" \
-    "$esc_model" "$cost_usd" "$esc_note"
+  # Optional "source" field — placed after "provider"; only when exactly "measured".
+  local source_field=""
+  [[ "$source" == "measured" ]] && source_field="\"source\":\"measured\","
+
+  # Optional cache fields — placed after "output_tokens"; only when > 0.
+  local cache_read_field="" cache_write_field=""
+  if [[ "$cache_read_tokens" =~ ^[0-9]+$ ]] && [[ "$cache_read_tokens" -gt 0 ]]; then
+    cache_read_field="\"cache_read_tokens\":${cache_read_tokens},"
+  fi
+  if [[ "$cache_write_tokens" =~ ^[0-9]+$ ]] && [[ "$cache_write_tokens" -gt 0 ]]; then
+    cache_write_field="\"cache_write_tokens\":${cache_write_tokens},"
+  fi
+
+  printf '{"v":1,"ts":"%s","step":"%s","spec":"%s","provider":"%s",%s"input_tokens":%s,"output_tokens":%s,%s%s"model":"%s","cost_usd":%s,"note":"%s"}\n' \
+    "$ts" "$esc_step" "$esc_spec" "$esc_provider" "$source_field" "$input_tokens" "$output_tokens" \
+    "$cache_read_field" "$cache_write_field" "$esc_model" "$cost_usd" "$esc_note"
 }
 
 # jsonl_get_field <field_name> <json_line>

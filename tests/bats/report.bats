@@ -150,3 +150,50 @@ teardown() {
   [ "$status" -eq 0 ]
   printf '%s\n' "$output" | grep -q 'No cost data recorded for this spec'
 }
+
+# ── Cache-aware repricing and mixed ledgers (User Story 1, 004-measured-token-usage) ──
+
+@test "US1: Src column shows 'e' for legacy entries and 'm' for measured entries" {
+  mkdir -p .specify/extensions/cost
+  stub_catalog
+  local ledger=".specify/extensions/cost/cost-ledger.jsonl"
+  printf '{"v":1,"ts":"2026-07-13T10:00:00Z","step":"after_specify","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"unknown","cost_usd":0.010500,"note":""}\n' >> "$ledger"
+  printf '{"v":1,"ts":"2026-07-16T20:00:00Z","step":"after_plan","spec":"001-cost-tracking-per-step","provider":"self-report","source":"measured","input_tokens":4228197,"output_tokens":49756,"cache_read_tokens":4010305,"model":"claude-sonnet-4-6","cost_usd":2.603108,"note":""}\n' >> "$ledger"
+
+  run bash "$REPORT_SCRIPT"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qE '^\| specify *\| *e *\|'
+  printf '%s\n' "$output" | grep -qE '^\| plan *\| *m *\|'
+}
+
+@test "US1: Tokens cell shows '(cached)' for cache-aware rows and 'in/out' for legacy rows" {
+  mkdir -p .specify/extensions/cost
+  stub_catalog
+  local ledger=".specify/extensions/cost/cost-ledger.jsonl"
+  printf '{"v":1,"ts":"2026-07-13T10:00:00Z","step":"after_specify","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"unknown","cost_usd":0.010500,"note":""}\n' >> "$ledger"
+  printf '{"v":1,"ts":"2026-07-16T20:00:00Z","step":"after_plan","spec":"001-cost-tracking-per-step","provider":"self-report","source":"measured","input_tokens":4228197,"output_tokens":49756,"cache_read_tokens":4010305,"model":"claude-sonnet-4-6","cost_usd":2.603108,"note":""}\n' >> "$ledger"
+
+  run bash "$REPORT_SCRIPT"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '1000/500'
+  printf '%s\n' "$output" | grep -q '4228197 (4010305 cached)/49756'
+}
+
+@test "US1: mixed ledger reprices the legacy row bit-for-bit and sums cumulative/grand total exactly (quickstart Scenario 7)" {
+  mkdir -p .specify/extensions/cost
+  stub_catalog
+  local ledger=".specify/extensions/cost/cost-ledger.jsonl"
+  # Pre-feature entry: no cache fields, no source — reprices at split defaults ($3/$15 per M).
+  printf '{"v":1,"ts":"2026-07-13T10:00:00Z","step":"after_specify","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"unknown","cost_usd":0.010500,"note":""}\n' >> "$ledger"
+  # Cache-aware measured entry: the verified reference session (quickstart Scenario 1).
+  printf '{"v":1,"ts":"2026-07-16T20:00:00Z","step":"after_plan","spec":"001-cost-tracking-per-step","provider":"self-report","source":"measured","input_tokens":4228197,"output_tokens":49756,"cache_read_tokens":4010305,"model":"claude-sonnet-4-6","cost_usd":2.603108,"note":""}\n' >> "$ledger"
+
+  run bash "$REPORT_SCRIPT"
+  [ "$status" -eq 0 ]
+  # Legacy row reprices to its exact v1.3.0 value.
+  printf '%s\n' "$output" | grep -q '\$0\.0105'
+  # Cache-aware row reprices to the verified reference value.
+  printf '%s\n' "$output" | grep -q '\$2\.6031'
+  # Grand total is the exact sum across the interleaved entries.
+  printf '%s\n' "$output" | grep -q '\*\*Total: \$2\.6136\*\*'
+}

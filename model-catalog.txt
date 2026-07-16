@@ -1,6 +1,8 @@
 # spec-kit-cost model price catalog
-# Format: model-id|input_per_M_USD|output_per_M_USD
+# Format: model-id|input_per_M_USD|output_per_M_USD[|cache_read_per_M_USD[|cache_write_per_M_USD]]
 # All rates are standard-tier USD per million tokens (text modality).
+# Cache columns (4-5) are optional — when absent, cache rates are derived as
+# 0.10x (read) / 1.25x (write) of the resolved input rate (see catalog.sh).
 # Audio/video/image-generation models are excluded — spec-kit is a text workflow.
 #
 # Sources (verified 2026-07-13):
@@ -34,6 +36,7 @@ claude-sonnet-4-5-20250929|3|15
 claude-sonnet-4-20250514|3|15
 claude-haiku-4-5|1|5
 claude-haiku-4-5-20251001|1|5
+claude-fable-5|3|15
 
 # ── OpenAI models ─────────────────────────────────────────────────────────────
 # Rates from openai.com/api/pricing (verified 2026-07-13).

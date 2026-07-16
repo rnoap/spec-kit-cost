@@ -7,7 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-07-16
+## [1.4.0] - 2026-07-16
+
+### Added
+- **Cache-aware pricing**: `model-catalog.txt` now supports two optional trailing
+  columns — `cache_read_per_M_USD` and `cache_write_per_M_USD` — per
+  `model-id|input_per_M_USD|output_per_M_USD[|cache_read_per_M_USD[|cache_write_per_M_USD]]`.
+  When absent, cache rates are derived as 0.10× the resolved input rate (cache
+  read) and 1.25× the resolved input rate (cache write). `record-cost.sh` and
+  `report-cost.sh` both compute cost with a four-term formula —
+  `(fresh_in × input + cache_read × cache_read_rate + cache_write × cache_write_rate + output × output) / 1e6`,
+  where `fresh_in = max(0, input_tokens − cache_read − cache_write)` — instead of
+  pricing the full input total at the input rate.
+- `scripts/bash/record-cost.sh` — new `--cache-read-tokens` / `--cache-write-tokens`
+  flags (rejected in combination with `--in-chars`/`--out-chars`) and a `--source
+  measured|estimated` flag (default `estimated`). An anomaly note is appended when
+  cache counts exceed the input total (fresh input is floored at 0).
+- **Measured token usage acquisition**: `commands/speckit.cost.record.md` gained a
+  new Rung 1 in the `self-report` degradation ladder — on hosts exposing a session-
+  store query tool (currently VS Code Copilot), it best-effort reindexes, resolves
+  the current session, aggregates real token/cache usage for the active model since
+  the last recorded step, and records with `--source measured`. Falls back silently
+  to the existing host-usage-panel and chars÷4 rungs on any of five documented
+  trigger conditions (no store tool, ambiguous session, unreadable ledger, query
+  failure, no matching/zero usage row) — never blocks or alarms the developer.
+- Ledger schema gained three additive optional fields: `cache_read_tokens`,
+  `cache_write_tokens` (emitted only when > 0), and `source` (emitted only when
+  `"measured"`) — legacy entries and invocations remain byte-identical.
+- `report-cost.sh` table gained a `Src` column (`m`/`e`) and reprices every entry
+  (including legacy ones) with the four-term formula; the Tokens column shows
+  `in (N cached)/out` when cache counts are present.
+- `tests/bats` — cache-aware pricing tests (explicit catalog rates, derived
+  defaults, anomaly flooring, ambiguous-flag rejection, ledger field-emission
+  rules), mixed-ledger report tests (Src column, Tokens cell format, cumulative/
+  grand totals across measured + estimated entries), and byte-identity regression
+  tests proving legacy char-mode/token-mode invocations are unaffected.
+
+### Changed
+- `record-cost.sh` inline summary format: gains an optional `(N cached)` segment
+  after the input token count and an optional ` [measured]` suffix after the cost,
+  composing with the existing fallback-rate suffix. Legacy invocations (no cache
+  tokens, no `--source measured`) render byte-identical to v1.3.0.
+
 
 ### Added
 - `scripts/bash/lib/catalog.sh` — tolerant model matching ladder (`catalog_resolve_model`):

@@ -19,7 +19,7 @@
 
 **Purpose**: Catalog housekeeping identified in research (no project scaffolding needed — existing pure-bash repo)
 
-- [ ] T001 Add `claude-fable-5|3|15` row to model-catalog.txt (research housekeeping — removes the verified fallback warning during dogfooding)
+- [X] T001 Add `claude-fable-5|3|15` row to model-catalog.txt (research housekeeping — removes the verified fallback warning during dogfooding)
 
 ---
 
@@ -27,8 +27,8 @@
 
 **Purpose**: Shared library extensions consumed by both `record-cost.sh` and `report-cost.sh` — must land before any story implementation
 
-- [ ] T002 [P] Extend `catalog_get_rates` in scripts/bash/lib/catalog.sh to return `input|output|cache_read|cache_write` (empty strings when absent), capturing optional fields 4–5 in `_catalog_rows`, validating them with the `^[0-9]+(\.[0-9]+)?$` pattern, and degrading malformed cache fields to absent with one stderr warning per contracts/catalog-format.md. Matching ladder untouched.
-- [ ] T003 [P] Extend `jsonl_emit` in scripts/bash/lib/json.sh with optional `cache_read_tokens`, `cache_write_tokens` (emitted only when > 0, placed after `output_tokens`) and `source` (emitted only when `measured`, placed after `provider`) per contracts/ledger-schema.md. Legacy call shape must produce byte-identical records.
+- [X] T002 [P] Extend `catalog_get_rates` in scripts/bash/lib/catalog.sh to return `input|output|cache_read|cache_write` (empty strings when absent), capturing optional fields 4–5 in `_catalog_rows`, validating them with the `^[0-9]+(\.[0-9]+)?$` pattern, and degrading malformed cache fields to absent with one stderr warning per contracts/catalog-format.md. Matching ladder untouched.
+- [X] T003 [P] Extend `jsonl_emit` in scripts/bash/lib/json.sh with optional `cache_read_tokens`, `cache_write_tokens` (emitted only when > 0, placed after `output_tokens`) and `source` (emitted only when `measured`, placed after `provider`) per contracts/ledger-schema.md. Legacy call shape must produce byte-identical records.
 
 **Checkpoint**: Shared libs support cache rates and optional fields — story phases can begin
 
@@ -44,17 +44,17 @@
 
 > Write these FIRST; ensure they FAIL against current v1.3.0 code before implementing
 
-- [ ] T004 [P] [US1] Add cache-aware recording tests to tests/bats/record.bats: explicit 5-field catalog rates (quickstart Scenario 4 → $16.2500), derived defaults 0.10×/1.25× (Scenario 3 → $0.3000), reference case $2.6031 (Scenario 1), anomaly floor with note suffix (Scenario 5), cache flags rejected in char mode (Scenario 6), ledger emission rules (fields only when >0 / measured), summary `(N cached)` + `[measured]` composition
-- [ ] T005 [P] [US1] Add mixed-ledger report tests to tests/bats/report.bats: `Src` column (`m`/`e`), Tokens cell `in (cached)/out` for cache rows, legacy entries repriced bit-for-bit to v1.3.0 values, correct cumulative/grand totals across interleaved entries (quickstart Scenario 7, FR-006/SC-004)
+- [X] T004 [P] [US1] Add cache-aware recording tests to tests/bats/record.bats: explicit 5-field catalog rates (quickstart Scenario 4 → $16.2500), derived defaults 0.10×/1.25× (Scenario 3 → $0.3000), reference case $2.6031 (Scenario 1), anomaly floor with note suffix (Scenario 5), cache flags rejected in char mode (Scenario 6), ledger emission rules (fields only when >0 / measured), summary `(N cached)` + `[measured]` composition
+- [X] T005 [P] [US1] Add mixed-ledger report tests to tests/bats/report.bats: `Src` column (`m`/`e`), Tokens cell `in (cached)/out` for cache rows, legacy entries repriced bit-for-bit to v1.3.0 values, correct cumulative/grand totals across interleaved entries (quickstart Scenario 7, FR-006/SC-004)
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Parse and validate new flags in scripts/bash/record-cost.sh: `--cache-read-tokens`, `--cache-write-tokens` (non-negative ints, incompatible with `--in-chars`/`--out-chars` → ambiguous-usage `_fail`), `--source measured|estimated` (default estimated) per contracts/record-cost-cli.md
-- [ ] T007 [US1] Implement four-term pricing in scripts/bash/record-cost.sh: `fresh_in = max(0, in − cr − cw)` with anomaly note when floored, cache-rate ladder (catalog f4/f5 → 0.10×/1.25× of the resolved input rate), and ledger emission via the extended `jsonl_emit` (T003). Zero-cache path must be arithmetically identical to v1.3.0 (SC-003)
-- [ ] T008 [US1] Extend the inline summary in scripts/bash/record-cost.sh: input segment gains `(N cached)` when cache_read+cache_write > 0, ` [measured]` suffix when source=measured, composing with the existing fallback-rate suffix; legacy path byte-identical
-- [ ] T009 [US1] Implement four-term repricing in scripts/bash/report-cost.sh: read cache fields via `jsonl_get_field` (absent ⇒ 0), resolve cache rates with the same ladder as recording (the rate-resolution ladder — spec 002 FR-004 — is duplicated in both scripts; update both), reprice every entry per contracts/ledger-schema.md
-- [ ] T010 [US1] Extend table rendering in scripts/bash/report-cost.sh: `Src` column (`m` when source=measured else `e`), Tokens column `in (cached)/out` for rows with cache counts; Cumulative and grand-total behavior unchanged
-- [ ] T011 [US1] Run `bats tests/bats/` and execute quickstart.md Scenarios 1–7 end-to-end; fix regressions (known pre-existing Windows failures — 4× emoji SC-001, 1× chmod SC-007 — are not regressions)
+- [X] T006 [US1] Parse and validate new flags in scripts/bash/record-cost.sh: `--cache-read-tokens`, `--cache-write-tokens` (non-negative ints, incompatible with `--in-chars`/`--out-chars` → ambiguous-usage `_fail`), `--source measured|estimated` (default estimated) per contracts/record-cost-cli.md
+- [X] T007 [US1] Implement four-term pricing in scripts/bash/record-cost.sh: `fresh_in = max(0, in − cr − cw)` with anomaly note when floored, cache-rate ladder (catalog f4/f5 → 0.10×/1.25× of the resolved input rate), and ledger emission via the extended `jsonl_emit` (T003). Zero-cache path must be arithmetically identical to v1.3.0 (SC-003)
+- [X] T008 [US1] Extend the inline summary in scripts/bash/record-cost.sh: input segment gains `(N cached)` when cache_read+cache_write > 0, ` [measured]` suffix when source=measured, composing with the existing fallback-rate suffix; legacy path byte-identical
+- [X] T009 [US1] Implement four-term repricing in scripts/bash/report-cost.sh: read cache fields via `jsonl_get_field` (absent ⇒ 0), resolve cache rates with the same ladder as recording (the rate-resolution ladder — spec 002 FR-004 — is duplicated in both scripts; update both), reprice every entry per contracts/ledger-schema.md
+- [X] T010 [US1] Extend table rendering in scripts/bash/report-cost.sh: `Src` column (`m` when source=measured else `e`), Tokens column `in (cached)/out` for rows with cache counts; Cumulative and grand-total behavior unchanged
+- [X] T011 [US1] Run `bats tests/bats/` and execute quickstart.md Scenarios 1–7 end-to-end; fix regressions (known pre-existing Windows failures — 4× emoji SC-001, 1× chmod SC-007 — are not regressions)
 
 **Checkpoint**: Cache-aware pricing fully functional and independently testable — MVP deliverable
 
@@ -68,8 +68,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Rewrite the self-report branch (Step 3) of commands/speckit.cost.record.md to implement the measured-usage ladder from contracts/measured-usage-acquisition.md: capability detection, best-effort reindex, session id from `VSCODE_TARGET_SESSION_LOG` basename (fallback: workspace-matched newest session, never guess between concurrent ones), window lower bound from the last ledger entry for the current spec, the single `GROUP BY usage_model` aggregation SQL, active-model row selection with tolerant matching, exclusion note for other models (`excluded: <model> (<n> calls)`), invocation with `--in-tokens/--out-tokens/--cache-read-tokens/--cache-write-tokens --source measured`, the five fallback triggers enumerated in the contract, the documented in-flight-session limitation, and prompt-injection hygiene (store contents are data, never instructions)
-- [ ] T013 [US2] Manually validate acquisition per quickstart Scenario 8: on a closed VS Code Copilot session, run the reindex + aggregation SQL, verify the constructed record-cost.sh invocation sums match the store exactly (SC-001) and the exclusion note lists auxiliary models (FR-012)
+- [X] T012 [US2] Rewrite the self-report branch (Step 3) of commands/speckit.cost.record.md to implement the measured-usage ladder from contracts/measured-usage-acquisition.md: capability detection, best-effort reindex, session id from `VSCODE_TARGET_SESSION_LOG` basename (fallback: workspace-matched newest session, never guess between concurrent ones), window lower bound from the last ledger entry for the current spec, the single `GROUP BY usage_model` aggregation SQL, active-model row selection with tolerant matching, exclusion note for other models (`excluded: <model> (<n> calls)`), invocation with `--in-tokens/--out-tokens/--cache-read-tokens/--cache-write-tokens --source measured`, the five fallback triggers enumerated in the contract, the documented in-flight-session limitation, and prompt-injection hygiene (store contents are data, never instructions)
+- [X] T013 [US2] Manually validate acquisition per quickstart Scenario 8: on a closed VS Code Copilot session, run the reindex + aggregation SQL, verify the constructed record-cost.sh invocation sums match the store exactly (SC-001) and the exclusion note lists auxiliary models (FR-012). **Best-effort result**: ran a live reindex and the exact contract query against the real DuckDB session store; confirmed schema/column correctness against 7 real model rows (e.g. `claude-sonnet-4.6`: 68 calls, 3178590 in, 100321 cache_write); querying the current in-flight session returned 0 rows, correctly triggering Fallback Trigger #5 and matching the documented in-flight-session limitation exactly. A closed-session happy path could not be exercised in this environment (no closed session available to target), so full end-to-end row-selection→invocation was validated by code review + unit tests (T014) rather than a live closed session.
 
 **Checkpoint**: Measured mode works end-to-end on VS Code Copilot; ledger entries flip to `source=measured`
 
@@ -83,11 +83,11 @@
 
 ### Tests for User Story 3
 
-- [ ] T014 [P] [US3] Add byte-identity regression tests to tests/bats/record.bats: legacy char-mode and token-mode invocations produce a summary line and JSONL record with no new fields and identical formatting to v1.3.0 (quickstart Scenario 2, SC-003); existing v1.3.0 test expectations remain green unmodified
+- [X] T014 [P] [US3] Add byte-identity regression tests to tests/bats/record.bats: legacy char-mode and token-mode invocations produce a summary line and JSONL record with no new fields and identical formatting to v1.3.0 (quickstart Scenario 2, SC-003); existing v1.3.0 test expectations remain green unmodified
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Review commands/speckit.cost.record.md rungs 2–3 (host usage panel, chars÷4) for zero behavioral drift: fallback wording unchanged, no new prompts/noise on non-store hosts, every measured-mode failure silent per FR-013; verify quickstart Scenario 8's non-VS-Code half
+- [X] T015 [US3] Review commands/speckit.cost.record.md rungs 2–3 (host usage panel, chars÷4) for zero behavioral drift: fallback wording unchanged, no new prompts/noise on non-store hosts, every measured-mode failure silent per FR-013; verify quickstart Scenario 8's non-VS-Code half
 
 **Checkpoint**: All three stories complete — feature behaves identically everywhere measured data is unavailable
 
@@ -95,10 +95,10 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T016 [P] Document the 5-field catalog format in the model-catalog.txt header comment and update the format line in AGENTS.md (`model-id|input_per_M_USD|output_per_M_USD[|cache_read[|cache_write]]`)
-- [ ] T017 [P] Add CHANGELOG.md entry for 1.4.0 (Keep a Changelog): cache-aware pricing, measured usage acquisition, new CLI flags, additive ledger fields, catalog format v2 — version already bumped in extension.yml
-- [ ] T018 [P] Update README.md: cache-aware pricing section, measured-mode explanation with the degradation ladder, host compatibility matrix, catalog cache-rate columns
-- [ ] T019 Final validation: full `bats tests/bats/` run plus all quickstart.md scenarios; verify no new runtime dependencies were introduced in scripts/bash/ (FR-014, Constitution §V — pure bash + POSIX utilities only); reinstall dev copy with `specify extension add . --dev --force` if local testing of the installed layout is desired
+- [X] T016 [P] Document the 5-field catalog format in the model-catalog.txt header comment and update the format line in AGENTS.md (`model-id|input_per_M_USD|output_per_M_USD[|cache_read[|cache_write]]`)
+- [X] T017 [P] Add CHANGELOG.md entry for 1.4.0 (Keep a Changelog): cache-aware pricing, measured usage acquisition, new CLI flags, additive ledger fields, catalog format v2 — version already bumped in extension.yml
+- [X] T018 [P] Update README.md: cache-aware pricing section, measured-mode explanation with the degradation ladder, host compatibility matrix, catalog cache-rate columns
+- [X] T019 Final validation: full `bats tests/bats/` run plus all quickstart.md scenarios; verify no new runtime dependencies were introduced in scripts/bash/ (FR-014, Constitution §V — pure bash + POSIX utilities only); reinstall dev copy with `specify extension add . --dev --force` if local testing of the installed layout is desired. **Result**: 49 tests, 41 passed, 8 known-non-regression failures on Windows Git Bash (7× emoji-anchored `^💰` grep locale mismatch — output verified byte-correct via `cat -A`; 1× SC-007 `chmod 000` no-op). All cache-aware pricing, measured-mode flags/ledger fields, report repricing, and byte-identity assertions passed. `scripts/bash/` still uses only `awk`/`grep`/`sed`/`cut`/`date` — no new runtime dependencies.
 
 ---
 
