@@ -36,7 +36,8 @@ Consequences:
    v1.3.0 (SC-004: bit-for-bit totals).
 2. **Cache rate resolution**: same ladder as recording
    ([catalog-format.md](catalog-format.md)); the ladder remains duplicated across
-   both scripts — any FR-004 change must touch both.
+   both scripts — any change to the rate-resolution ladder (spec 002 FR-004) must
+   touch both.
 3. **Table rendering** (research D10):
    - New `Src` column: `m` when `source=measured`, else `e`.
    - Tokens column shows `in (cached)/out` when `cache_read+cache_write > 0` for the

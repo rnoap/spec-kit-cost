@@ -29,8 +29,8 @@ model-id|input_per_M_USD|output_per_M_USD[|cache_read_per_M_USD[|cache_write_per
 
 ## Rate resolution with cache terms
 
-Per token type, first hit wins (extends FR-004; duplicated in `record-cost.sh` and
-`report-cost.sh` — update both):
+Per token type, first hit wins (extends the spec 002 FR-004 resolution ladder;
+duplicated in `record-cost.sh` and `report-cost.sh` — update both):
 
 | Term | Ladder |
 |---|---|

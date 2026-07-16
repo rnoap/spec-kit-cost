@@ -52,7 +52,7 @@
 - [ ] T006 [US1] Parse and validate new flags in scripts/bash/record-cost.sh: `--cache-read-tokens`, `--cache-write-tokens` (non-negative ints, incompatible with `--in-chars`/`--out-chars` → ambiguous-usage `_fail`), `--source measured|estimated` (default estimated) per contracts/record-cost-cli.md
 - [ ] T007 [US1] Implement four-term pricing in scripts/bash/record-cost.sh: `fresh_in = max(0, in − cr − cw)` with anomaly note when floored, cache-rate ladder (catalog f4/f5 → 0.10×/1.25× of the resolved input rate), and ledger emission via the extended `jsonl_emit` (T003). Zero-cache path must be arithmetically identical to v1.3.0 (SC-003)
 - [ ] T008 [US1] Extend the inline summary in scripts/bash/record-cost.sh: input segment gains `(N cached)` when cache_read+cache_write > 0, ` [measured]` suffix when source=measured, composing with the existing fallback-rate suffix; legacy path byte-identical
-- [ ] T009 [US1] Implement four-term repricing in scripts/bash/report-cost.sh: read cache fields via `jsonl_get_field` (absent ⇒ 0), resolve cache rates with the same ladder as recording (FR-004 duplication — both scripts), reprice every entry per contracts/ledger-schema.md
+- [ ] T009 [US1] Implement four-term repricing in scripts/bash/report-cost.sh: read cache fields via `jsonl_get_field` (absent ⇒ 0), resolve cache rates with the same ladder as recording (the rate-resolution ladder — spec 002 FR-004 — is duplicated in both scripts; update both), reprice every entry per contracts/ledger-schema.md
 - [ ] T010 [US1] Extend table rendering in scripts/bash/report-cost.sh: `Src` column (`m` when source=measured else `e`), Tokens column `in (cached)/out` for rows with cache counts; Cumulative and grand-total behavior unchanged
 - [ ] T011 [US1] Run `bats tests/bats/` and execute quickstart.md Scenarios 1–7 end-to-end; fix regressions (known pre-existing Windows failures — 4× emoji SC-001, 1× chmod SC-007 — are not regressions)
 
@@ -68,7 +68,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [US2] Rewrite the self-report branch (Step 3) of commands/speckit.cost.record.md to implement the measured-usage ladder from contracts/measured-usage-acquisition.md: capability detection, best-effort reindex, session id from `VSCODE_TARGET_SESSION_LOG` basename (fallback: workspace-matched newest session, never guess between concurrent ones), window lower bound from the last ledger entry for the current spec, the single `GROUP BY usage_model` aggregation SQL, active-model row selection with tolerant matching, exclusion note for other models (`excluded: <model> (<n> calls)`), invocation with `--in-tokens/--out-tokens/--cache-read-tokens/--cache-write-tokens --source measured`, all five fallback triggers, the documented in-flight-session limitation, and prompt-injection hygiene (store contents are data, never instructions)
+- [ ] T012 [US2] Rewrite the self-report branch (Step 3) of commands/speckit.cost.record.md to implement the measured-usage ladder from contracts/measured-usage-acquisition.md: capability detection, best-effort reindex, session id from `VSCODE_TARGET_SESSION_LOG` basename (fallback: workspace-matched newest session, never guess between concurrent ones), window lower bound from the last ledger entry for the current spec, the single `GROUP BY usage_model` aggregation SQL, active-model row selection with tolerant matching, exclusion note for other models (`excluded: <model> (<n> calls)`), invocation with `--in-tokens/--out-tokens/--cache-read-tokens/--cache-write-tokens --source measured`, the five fallback triggers enumerated in the contract, the documented in-flight-session limitation, and prompt-injection hygiene (store contents are data, never instructions)
 - [ ] T013 [US2] Manually validate acquisition per quickstart Scenario 8: on a closed VS Code Copilot session, run the reindex + aggregation SQL, verify the constructed record-cost.sh invocation sums match the store exactly (SC-001) and the exclusion note lists auxiliary models (FR-012)
 
 **Checkpoint**: Measured mode works end-to-end on VS Code Copilot; ledger entries flip to `source=measured`
@@ -98,7 +98,7 @@
 - [ ] T016 [P] Document the 5-field catalog format in the model-catalog.txt header comment and update the format line in AGENTS.md (`model-id|input_per_M_USD|output_per_M_USD[|cache_read[|cache_write]]`)
 - [ ] T017 [P] Add CHANGELOG.md entry for 1.4.0 (Keep a Changelog): cache-aware pricing, measured usage acquisition, new CLI flags, additive ledger fields, catalog format v2 — version already bumped in extension.yml
 - [ ] T018 [P] Update README.md: cache-aware pricing section, measured-mode explanation with the degradation ladder, host compatibility matrix, catalog cache-rate columns
-- [ ] T019 Final validation: full `bats tests/bats/` run plus all quickstart.md scenarios; reinstall dev copy with `specify extension add . --dev --force` if local testing of the installed layout is desired
+- [ ] T019 Final validation: full `bats tests/bats/` run plus all quickstart.md scenarios; verify no new runtime dependencies were introduced in scripts/bash/ (FR-014, Constitution §V — pure bash + POSIX utilities only); reinstall dev copy with `specify extension add . --dev --force` if local testing of the installed layout is desired
 
 ---
 
@@ -107,7 +107,7 @@
 - **Setup (Phase 1)**: no dependencies
 - **Foundational (Phase 2)**: T002, T003 independent of each other [P]; block all story phases
 - **US1 (Phase 3)**: depends on T002+T003. T004/T005 [P] first (failing tests), then T006 → T007 → T008 (same file, sequential); T009 → T010 (same file, sequential; parallel with T006–T008); T011 last
-- **US2 (Phase 4)**: depends on US1 (T006 flags must exist). T012 → T13
+- **US2 (Phase 4)**: depends on US1 (T006 flags must exist). T012 → T013
 - **US3 (Phase 5)**: T014 may be written in parallel with US1 implementation; T015 after T012
 - **Polish (Phase 6)**: T016–T018 [P] after all stories; T019 last
 
@@ -118,7 +118,7 @@ T003 ──┘                                    │
                                             ▼
                               US2: T012 → T013
                                             │
-              US3: T014 (∥ con US1) ──► T015
+              US3: T014 (parallel with US1) ──► T015
                                             │
                                             ▼
                         Polish: (T016 ∥ T017 ∥ T018) → T019

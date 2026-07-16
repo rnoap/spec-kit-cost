@@ -83,6 +83,19 @@ bash <scripts-path>/record-cost.sh \
 Pass store sums **as-is** — no agent-side subtraction; the script separates fresh
 input from cache (research D4).
 
+## Fallback triggers (exhaustive)
+
+Exactly these five conditions abort measured mode and drop silently to the next
+rung (reindex errors are ignored, not a trigger):
+
+1. No session-store query tool is available on the host.
+2. The current session id cannot be resolved unambiguously (template variable
+   absent and workspace matching is ambiguous).
+3. The ledger exists but cannot be read during window scoping (FR-011 — never risk
+   double-counting).
+4. The aggregation query fails or errors.
+5. No row matches the active model, or the active-model row totals are zero.
+
 ## Known limitation (verified 2026-07-16, MUST be documented in the skill)
 
 In-flight sessions are not indexed even after reindex — only closed/reloaded
