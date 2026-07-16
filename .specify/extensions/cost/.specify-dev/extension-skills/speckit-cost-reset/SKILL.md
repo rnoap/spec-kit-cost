@@ -4,8 +4,10 @@ description: Clear recorded cost entries for the current spec (requires confirma
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: cost:commands/speckit.cost.reset.md
+  source: extension:cost
 ---
+
+# Cost Reset Skill
 
 # Reset Cost Entries
 

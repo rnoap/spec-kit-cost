@@ -39,6 +39,19 @@ stub_config() {
     > .specify/extensions/cost/cost-config.yml
 }
 
+# Create a stub model-catalog.txt in the ledger directory with known test rates.
+# Usage: stub_catalog
+stub_catalog() {
+  mkdir -p .specify/extensions/cost
+  cat > .specify/extensions/cost/model-catalog.txt <<'EOF'
+# test catalog
+gpt-5.3-codex|1.75|14
+claude-sonnet-4-6|3|15
+gpt-5.4|2.5|15
+gpt-5.4-mini|0.75|4.5
+EOF
+}
+
 # Seed the ledger with N entries for a given spec.
 # Usage: seed_ledger_entries <spec_name> <count>
 seed_ledger_entries() {

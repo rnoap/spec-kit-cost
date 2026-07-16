@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-16
+
+### Added
+- `scripts/bash/lib/catalog.sh` — tolerant model matching ladder (`catalog_resolve_model`):
+  exact ID → normalized (case, spaces/underscores → dashes, parentheticals stripped) →
+  dots→dashes candidate → longest-prefix match for dated/suffixed variants. UI labels
+  like `GPT-5.3-Codex` or `Claude Sonnet 4.6` and variants like
+  `claude-sonnet-4-6-20260101` now resolve to their catalog entries instead of
+  silently falling back to the blended rate.
+- `scripts/bash/record-cost.sh` — visible inline fallback marker: when a *named*
+  model misses the catalog, the 💰 summary line now ends with
+  `(fallback rate — "<model>" not in catalog)` so degraded accuracy is no longer
+  hidden in stderr that agent harnesses may swallow.
+- `scripts/bash/lib/config.sh` — `config_get_price_per_1k_raw` (no hardcoded
+  default) so scripts can distinguish an explicit legacy blended rate from an
+  absent key.
+- `tests/bats` — 8 new tests covering case-insensitive/display-label/dated-variant
+  matching, canonical ID storage, split fallback amounts, fallback marker, and
+  report repricing of legacy display-label entries; new `stub_catalog` helper.
+- `.gitignore` — exclude the local cost ledger
+  (`.specify/extensions/cost/cost-ledger.jsonl`): workspace-local data, not source.
+
+### Changed
+- **Split fallback rates**: when the active model is not in the catalog and no
+  explicit `price_per_1k` is configured, cost now uses $3/M input + $15/M output
+  (as long documented) instead of a blended $3/M for both — output tokens were
+  previously underpriced up to 5×. Setting `price_per_1k` explicitly preserves
+  the legacy blended behavior.
+- `scripts/bash/record-cost.sh` — the ledger now stores the *canonical* resolved
+  catalog ID (e.g. `gpt-5.3-codex`) rather than the raw label passed via `--model`,
+  so `report-cost.sh` repricing stays accurate.
+- `config-template.yml` — `price_per_1k` is now commented out (opt-in): shipping it
+  active pinned every unknown-model estimate to the blended rate.
+- `commands/speckit.cost.record.md` + skill copy — Step 3a now covers GitHub
+  Copilot display labels (`GPT-5.3-Codex` → `gpt-5.3-codex`) and documents the
+  script-side normalization; self-report branch now prefers real token counts via
+  `--in-tokens`/`--out-tokens` when the host agent exposes actual usage.
+- `AGENTS.md` — expanded project context: repository layout table, development
+  workflow (bats, dev-install loop, release checklist), SDD skill map, and
+  code-review-graph MCP exploration guidance.
+
+### Fixed
+- Model detection failures caused by case/format mismatches (e.g. `GPT-5.3-Codex`
+  from the GitHub Copilot UI never matching `gpt-5.3-codex`), which produced
+  underestimated fallback-rate entries like $0.0270 instead of $0.0525.
+- Doc/code mismatch: config template promised "$3/M input, $15/M output" defaults
+  while the code applied blended $3/M to both token types.
+
 ## [1.2.2] - 2026-07-14
 
 ### Added

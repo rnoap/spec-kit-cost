@@ -35,13 +35,60 @@ overwritten on the next reinstall. The root of this repo is always the source of
 ## Project
 
 **Name:** spec-kit-cost  
-**Purpose:** spec-kit extension that tracks estimated LLM token cost per workflow step,
-appending an append-only USD ledger and reporting cumulative per-spec breakdowns.
+**Purpose:** spec-kit extension that tracks estimated LLM token cost per workflow step.
+Auto-detects the active model, applies per-model input/output rates from
+`model-catalog.txt`, appends an append-only USD ledger, and reports cumulative
+per-spec breakdowns.
+
+## Repository Layout
+
+| Path | Purpose |
+|------|---------|
+| `extension.yml` | Extension manifest: commands, config templates, 7 lifecycle hooks |
+| `commands/` | Command prompt definitions (`speckit.cost.record` / `.report` / `.reset`) |
+| `scripts/bash/` | Implementations: `record-cost.sh`, `report-cost.sh`, `reset-cost.sh` |
+| `scripts/bash/lib/` | Shared helpers: `catalog.sh`, `config.sh`, `json.sh` |
+| `model-catalog.txt` | Price catalog: `model-id\|input_per_M_USD\|output_per_M_USD` per line |
+| `config-template.yml` | Template for the user-facing `cost-config.yml` |
+| `tests/bats/` | bats-core suites: `record.bats`, `report.bats`, `reset.bats` |
+| `specs/` | SDD artifacts per feature |
+
+## Development
+
+- Implementation is pure POSIX bash with **no runtime dependencies** — keep it that way.
+- Run tests with bats-core (on Windows use Git Bash or WSL):
+
+  ```bash
+  bats tests/bats/              # all suites
+  bats tests/bats/record.bats   # single suite
+  ```
+
+- Dev-install loop: after editing source at the repo root, reinstall the local copy
+  with `specify extension add . --dev --force` (this regenerates `.specify/extensions/cost/`).
+- The ledger (`.specify/extensions/cost/cost-ledger.jsonl`) is JSON Lines and
+  **append-only** — never modify or delete entries in normal operation.
+- When releasing, bump `version` in `extension.yml` and add a `CHANGELOG.md` entry
+  (Keep a Changelog format, SemVer).
 
 ## Spec-Driven Development
 
-This project uses [spec-kit](https://gecgithub01.walmart.com/developer-solutions/spec-kit) for spec-driven development.
+This project uses [spec-kit](https://github.com/github/spec-kit) for spec-driven development.
 
 - Specifications live in `specs/`
 - Each feature gets its own `specs/<NNN>-<name>/` directory containing `spec.md`, `plan.md`, and `tasks.md`
-- Use `/spec-kit-walmart:spec-architect` to create new specs or get help with the SDD workflow
+- Workflow skills are installed under `.github/skills/` — use `/speckit-specify`,
+  `/speckit-clarify`, `/speckit-plan`, `/speckit-tasks`, and `/speckit-implement`
+  for the SDD lifecycle, plus `/speckit-cost-record`, `/speckit-cost-report`, and
+  `/speckit-cost-reset` for this extension's own commands
+
+## code-review-graph MCP
+
+Details for the priority block at the top of this file:
+
+- `semantic_search_nodes_tool` — natural-language search over indexed functions/files
+  (provider=local, model=all-MiniLM-L6-v2)
+- `query_graph_tool` — structural queries: callers, callees, imports, tests of a node
+- After significant code changes, rebuild with `build_or_update_graph_tool`, then
+  re-embed with `embed_graph_tool`
+- Fall back to `grep_search` only for exact literal strings the graph does not index
+  (log messages, CLI flag names, heredoc contents)

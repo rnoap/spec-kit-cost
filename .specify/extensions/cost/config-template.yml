@@ -10,13 +10,16 @@
 # Override at runtime: export SPECKIT_COST_PROVIDER=manual
 provider: self-report
 
-# price_per_1k: Legacy blended rate in USD per 1,000 tokens.
-#   Used as fallback when BOTH of the following are true:
+# price_per_1k: Legacy blended rate in USD per 1,000 tokens (single rate applied
+#   to BOTH input and output tokens).
+#   Only used when it is explicitly set here AND:
 #     1. No per-type override keys are set (see input_rate_per_1k / output_rate_per_1k below).
 #     2. The active model is not found in model-catalog.txt.
-#   For known models, the catalog provides separate input/output rates automatically —
-#   you do not need to set this key for accurate results.
-price_per_1k: 0.003
+#   When this key is absent, unknown models use the split defaults instead
+#   ($3/M input, $15/M output — Sonnet-class), which are far closer to real
+#   pricing than a blended rate. Leave it commented out unless you specifically
+#   want a single blended rate.
+# price_per_1k: 0.003
 
 # input_rate_per_1k / output_rate_per_1k: Per-type rate overrides in USD per 1,000 tokens.
 #   When set, these take PRIORITY over the model catalog for that token type.
@@ -27,9 +30,10 @@ price_per_1k: 0.003
 #
 #   Rate resolution order (FR-004):
 #     1. input_rate_per_1k / output_rate_per_1k  (this file — highest priority)
-#     2. model-catalog.txt entry for the active model (auto-detected from harness)
-#     3. price_per_1k (this file — legacy blended fallback)
-#     4. Hardcoded default: $3/M input, $15/M output (Sonnet-class)
+#     2. model-catalog.txt entry for the active model (auto-detected from harness;
+#        matching is case/format-insensitive and handles dated variants)
+#     3. price_per_1k (this file — legacy blended fallback, only if explicitly set)
+#     4. Split defaults: $3/M input, $15/M output (Sonnet-class)
 #
 #   Partial override is valid: set only the key you want to override; the other
 #   type resolves from the catalog or price_per_1k as normal.

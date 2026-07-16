@@ -12,6 +12,13 @@
 # The active model is detected from whichever context signal the host agent provides.
 # Rate resolution — same FR-004 priority ladder in record-cost.sh and report-cost.sh.
 # To add/update a model, edit this file only — no script changes required (FR-007).
+#
+# Matching rules (catalog.sh) — lookups are tolerant, so aliases are rarely needed:
+#   1. Exact ID match.
+#   2. Case/format-insensitive: "GPT-5.3-Codex" → gpt-5.3-codex; spaces → dashes.
+#   3. Dots → dashes candidate: "Claude Sonnet 4.6" → claude-sonnet-4-6.
+#   4. Dated/suffixed variants match their base ID by longest prefix:
+#      claude-opus-4-8-20260220 → claude-opus-4-8.
 
 # ── Claude models ─────────────────────────────────────────────────────────────
 # Rates from Wibey gateway (wibey-cli src/constants/models.ts).

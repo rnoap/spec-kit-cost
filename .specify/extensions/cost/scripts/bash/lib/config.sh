@@ -80,6 +80,25 @@ config_get_output_rate_per_1k() {
   printf '%s' "$value"
 }
 
+# config_get_price_per_1k_raw [config_file]
+# Read 'price_per_1k' from cost-config.yml with NO hardcoded default.
+# Returns "" when the file or key is absent — callers use this to distinguish
+# an explicit legacy blended rate from the documented split defaults
+# ($3/M input, $15/M output). Unit: USD per 1,000 tokens.
+config_get_price_per_1k_raw() {
+  local config_file="${1:-.specify/extensions/cost/cost-config.yml}"
+  local value=""
+  if [[ -f "$config_file" ]]; then
+    value="$(grep -E "^[[:space:]]*price_per_1k[[:space:]]*:" "$config_file" 2>/dev/null \
+      | head -1 \
+      | sed "s/^[[:space:]]*price_per_1k[[:space:]]*:[[:space:]]*//" \
+      | sed 's/[[:space:]]*#.*$//' \
+      | sed 's/[[:space:]]*$//' \
+      | sed "s/^['\"]//; s/['\"]$//")"
+  fi
+  printf '%s' "$value"
+}
+
 # config_get_ledger_dir
 # Return the directory where the ledger and config live.
 # Always under .specify/extensions/cost/ (Constitution §II).

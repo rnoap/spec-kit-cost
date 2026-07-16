@@ -33,9 +33,9 @@
       "installed_at": "2026-07-13T16:34:46.860665+00:00"
     },
     "cost": {
-      "version": "1.2.2",
+      "version": "1.3.0",
       "source": "local",
-      "manifest_hash": "sha256:b82277876d6d889f76d7645dc7cf032f1670423849785c89bf91ed79f62fa71c",
+      "manifest_hash": "sha256:2b6aef95bc9ccdf46d114660cd7f5a54aed6fa4f0eb753f6ff3caee4dffeb236",
       "enabled": true,
       "priority": 10,
       "registered_commands": {},
@@ -44,7 +44,7 @@
         "speckit-cost-report",
         "speckit-cost-reset"
       ],
-      "installed_at": "2026-07-14T18:49:29.927025+00:00"
+      "installed_at": "2026-07-16T15:41:05.115390+00:00"
     }
   }
 }

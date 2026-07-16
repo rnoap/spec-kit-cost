@@ -5,8 +5,10 @@ description: Show the per-step cost breakdown and cumulative total for the curre
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: cost:commands/speckit.cost.report.md
+  source: extension:cost
 ---
+
+# Cost Report Skill
 
 # Cost Report
 

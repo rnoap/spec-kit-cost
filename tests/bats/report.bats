@@ -25,7 +25,8 @@ teardown() {
   # Seed 3 known entries for the current spec manually.
   mkdir -p .specify/extensions/cost
   local ledger=".specify/extensions/cost/cost-ledger.jsonl"
-  # 3 entries: 1000+500 tokens each at $0.003/1K = $0.0045 each → total $0.0135
+  # Explicit blended config: 3 entries × (1000+500 tokens at $0.003/1K) = $0.0045 each → $0.0135
+  stub_config self-report 0.003 unknown
   printf '{"v":1,"ts":"2026-07-13T10:00:00Z","step":"after_specify","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"unknown","cost_usd":0.004500,"note":""}\n' >> "$ledger"
   printf '{"v":1,"ts":"2026-07-13T10:01:00Z","step":"after_clarify","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"unknown","cost_usd":0.004500,"note":""}\n' >> "$ledger"
   printf '{"v":1,"ts":"2026-07-13T10:02:00Z","step":"after_plan","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"unknown","cost_usd":0.004500,"note":""}\n' >> "$ledger"
@@ -35,6 +36,30 @@ teardown() {
 
   # Total should be 3 × 0.0045 = 0.0135 (displayed at 4dp).
   printf '%s\n' "$output" | grep -q '\*\*Total: \$0\.0135\*\*'
+}
+
+@test "SC-003: unknown model without config reprices at split defaults ($3/$15 per M)" {
+  mkdir -p .specify/extensions/cost
+  local ledger=".specify/extensions/cost/cost-ledger.jsonl"
+  # No config file: 1000×3/1M + 500×15/1M = 0.003 + 0.0075 = 0.0105
+  printf '{"v":1,"ts":"2026-07-13T10:00:00Z","step":"after_specify","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"unknown","cost_usd":0.004500,"note":""}\n' >> "$ledger"
+
+  run bash "$REPORT_SCRIPT"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\*\*Total: \$0\.0105\*\*'
+}
+
+@test "SC-003: ledger entry with display-label model reprices via normalized catalog match" {
+  mkdir -p .specify/extensions/cost
+  stub_catalog
+  local ledger=".specify/extensions/cost/cost-ledger.jsonl"
+  # Legacy entry recorded with a UI label: gpt-5.3-codex rates apply.
+  # 1000×1.75/1M + 500×14/1M = 0.00175 + 0.007 = 0.00875 → $0.0088
+  printf '{"v":1,"ts":"2026-07-13T10:00:00Z","step":"after_analyze","spec":"001-cost-tracking-per-step","provider":"self-report","input_tokens":1000,"output_tokens":500,"model":"GPT-5.3-Codex","cost_usd":0.027000,"note":""}\n' >> "$ledger"
+
+  run bash "$REPORT_SCRIPT"
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\*\*Total: \$0\.0088\*\*'
 }
 
 @test "SC-003: table has one row per ledger entry for current spec" {

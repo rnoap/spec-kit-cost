@@ -4,8 +4,10 @@ description: Compute and record the cost of the just-completed workflow step.
 compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
   author: github-spec-kit
-  source: cost:commands/speckit.cost.record.md
+  source: extension:cost
 ---
+
+# Cost Record Skill
 
 # Record Step Cost
 
@@ -51,7 +53,9 @@ context. Extract the model ID from the parenthetical:
 **2. Host agent context (GitHub Copilot, Cursor, others)**
 Look for any explicit model identifier in your system prompt or context provided by
 the host agent. Common formats: `Model: gpt-5.4`, `Using model: gemini-2.5-pro`,
-or a model field in the agent's instructions.
+or a model field in the agent's instructions. GitHub Copilot shows the active model
+as a display label (e.g., `GPT-5.3-Codex`, `Claude Sonnet 4.5`) — lowercase it to
+form the ID: `GPT-5.3-Codex` → `gpt-5.3-codex`.
 
 **3. Self-identification**
 You know what model you are. Use the canonical API model ID — not the display name.
@@ -61,11 +65,14 @@ Examples:
 - Gemini 2.5 Pro → `gemini-2.5-pro`
 
 Cross-reference with `.specify/extensions/cost/model-catalog.txt` to confirm the
-exact ID string that will match a catalog entry.
+exact ID string that will match a catalog entry. The script normalizes case, spaces,
+dots, and dated suffixes (`GPT-5.3-Codex`, `Claude Sonnet 4.6`, and
+`claude-sonnet-4-5-20250929` all resolve to their catalog entries), but passing the
+exact lowercase catalog ID is still preferred.
 
 **4. Fallback**
 Read `model` from `.specify/extensions/cost/cost-config.yml`. If absent or `unknown`,
-use `unknown` (triggers a warning and applies the blended fallback rate).
+use `unknown` (applies the split fallback rates: $3/M input, $15/M output).
 
 Store the result as `<MODEL_ID>` and include `--model <MODEL_ID>` in every script
 invocation below.
@@ -74,7 +81,12 @@ invocation below.
 
 **`self-report` (default)**
 
-Estimate the character count of:
+If the host agent exposes **actual token usage** for this step (a usage/billing
+panel, session token counter, or API usage metadata), prefer those real numbers:
+pass them directly via `--in-tokens <N>` / `--out-tokens <N>` and skip the
+character estimation below.
+
+Otherwise, estimate the character count of:
 - **Input content**: the spec file(s), user prompt, and any context visible at the
   start of this step (approximate total characters passed into the AI for this step).
 - **Output content**: the AI's response generated during this step (approximate total

@@ -94,42 +94,57 @@ active_model="${model_override:-$(config_get model)}"
 # Read optional per-type override keys (return "" when absent — no defaults here).
 cfg_input_rate_per_1k="$(config_get_input_rate_per_1k)"
 cfg_output_rate_per_1k="$(config_get_output_rate_per_1k)"
-# Legacy blended fallback.
-price_per_1k="$(config_get price_per_1k)"
-[[ -z "$price_per_1k" ]] && price_per_1k="0.003"
-[[ "$price_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]] || price_per_1k="0.003"
+# Legacy blended fallback — only honored when explicitly set in the config file.
+# When absent, the split defaults ($3/M input, $15/M output) apply instead.
+price_per_1k="$(config_get_price_per_1k_raw)"
+[[ "$price_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]] || price_per_1k=""
 
 # ── Catalog lookup for detected model (FR-003, FR-005) ────────────────────────
-catalog_rates="$(catalog_get_rates "$active_model")"
+# catalog_resolve_model normalizes UI labels (case, spaces, dots, dated suffixes)
+# so "GPT-5.3-Codex" or "Claude Sonnet 4.6" resolve to their canonical IDs.
+resolved_model="$(catalog_resolve_model "$active_model")"
+catalog_rates=""
+if [[ -n "$resolved_model" ]]; then
+  catalog_rates="$(catalog_get_rates "$resolved_model")"
+  # Store the canonical ID in the ledger so reports reprice correctly.
+  active_model="$resolved_model"
+fi
 catalog_in=""
 catalog_out=""
+fallback_used=0
 if [[ -n "$catalog_rates" ]]; then
   catalog_in="$(printf '%s' "$catalog_rates" | cut -d'|' -f1)"
   catalog_out="$(printf '%s' "$catalog_rates" | cut -d'|' -f2)"
 elif [[ "$active_model" != "unknown" ]]; then
   # FR-005: emit non-fatal warning for unrecognized models; do not fail.
-  printf '⚠️  speckit-cost: model "%s" not found in catalog — using fallback rate\n' \
+  fallback_used=1
+  printf '⚠️  speckit-cost: model "%s" not found in catalog — using fallback rate. Add it to model-catalog.txt for accurate pricing.\n' \
     "$active_model" >&2
 fi
 
 # ── FR-004 rate resolution — per-M (USD per million tokens) ──────────────────
-# Priority per token type: config override → catalog → blended price_per_1k → default.
+# Priority per token type: config override → catalog → explicit blended
+# price_per_1k → split defaults ($3/M input, $15/M output — Sonnet-class).
 # Config values are per-1K; multiply ×1000 to convert to per-M.
 # Rate resolution — same ladder also in report-cost.sh. Update both if FR-004 changes.
 if [[ -n "$cfg_input_rate_per_1k" && "$cfg_input_rate_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
   input_rate_M="$(awk -v r="$cfg_input_rate_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
 elif [[ -n "$catalog_in" ]]; then
   input_rate_M="$catalog_in"
-else
+elif [[ -n "$price_per_1k" ]]; then
   input_rate_M="$(awk -v r="$price_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
+else
+  input_rate_M="3"
 fi
 
 if [[ -n "$cfg_output_rate_per_1k" && "$cfg_output_rate_per_1k" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
   output_rate_M="$(awk -v r="$cfg_output_rate_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
 elif [[ -n "$catalog_out" ]]; then
   output_rate_M="$catalog_out"
-else
+elif [[ -n "$price_per_1k" ]]; then
   output_rate_M="$(awk -v r="$price_per_1k" 'BEGIN { printf "%.9f", r * 1000 }')"
+else
+  output_rate_M="15"
 fi
 
 # ── Spec identifier from feature context (CR-R3, FR-004) ─────────────────────
@@ -219,5 +234,11 @@ display_step="${step#after_}"
 # FIXED (high): use awk -v to pass cost_usd safely.
 display_cost="$(awk -v c="$cost_usd" 'BEGIN { printf "%.4f", c }')" \
   || display_cost="$cost_usd"
-printf '💰 %s: ~%s in / ~%s out tokens ≈ $%s\n' \
-  "$display_step" "$in_tokens" "$out_tokens" "$display_cost"
+# Make degraded accuracy visible inline when a *named* model missed the catalog
+# (stderr warnings are often swallowed by agent harnesses).
+fallback_suffix=""
+if [[ "$fallback_used" -eq 1 ]]; then
+  fallback_suffix=" (fallback rate — \"${active_model}\" not in catalog)"
+fi
+printf '💰 %s: ~%s in / ~%s out tokens ≈ $%s%s\n' \
+  "$display_step" "$in_tokens" "$out_tokens" "$display_cost" "$fallback_suffix"

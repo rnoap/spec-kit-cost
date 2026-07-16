@@ -64,13 +64,14 @@ teardown() {
   [ "$lines" -eq 1 ]
 }
 
-@test "SC-002: ledger entry uses default price 0.003 when no config present" {
+@test "SC-002: no config present uses split fallback rates ($3/M in, $15/M out)" {
   rm -f .specify/extensions/cost/cost-config.yml
 
-  bash "$RECORD_SCRIPT" --step after_specify --in-chars 1000 --out-chars 1000
-  local ledger=".specify/extensions/cost/cost-ledger.jsonl"
-  # cost_usd = (250 + 250) / 1000 * 0.003 = 0.0015  (1000 chars each → 250 tokens each)
-  grep -q '"provider":"self-report"' "$ledger"
+  # 4000 chars → 1000 in tokens; 4000 chars → 1000 out tokens.
+  # cost = 1000×3/1M + 1000×15/1M = 0.003 + 0.015 = 0.018
+  run bash "$RECORD_SCRIPT" --step after_specify --in-chars 4000 --out-chars 4000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.0180'
 }
 
 @test "SC-002: ledger record contains all required fields (FR-018)" {
@@ -130,4 +131,80 @@ teardown() {
 @test "SC-007: manual provider without token counts exits 0 with warning" {
   run bash "$RECORD_SCRIPT" --step after_specify --provider manual
   [ "$status" -eq 0 ]
+}
+
+# ── Model matching (FR-002/FR-003): catalog lookup tolerance ───────────────────
+
+@test "model matching: exact catalog ID uses per-model rates" {
+  stub_catalog
+  # 4000 chars → 1000 in; 4000 chars → 1000 out.
+  # gpt-5.3-codex: 1000×1.75/1M + 1000×14/1M = 0.00175 + 0.014 = 0.01575 → $0.0158
+  run bash "$RECORD_SCRIPT" --step after_specify --model gpt-5.3-codex \
+    --in-chars 4000 --out-chars 4000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.0158'
+  ! printf '%s\n' "$output" | grep -q 'fallback'
+}
+
+@test "model matching: display label 'GPT-5.3-Codex' resolves case-insensitively" {
+  stub_catalog
+  run bash "$RECORD_SCRIPT" --step after_analyze --model 'GPT-5.3-Codex' \
+    --in-chars 4000 --out-chars 4000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.0158'
+  ! printf '%s\n' "$output" | grep -q 'fallback'
+  # Ledger stores the canonical catalog ID, not the display label.
+  grep -q '"model":"gpt-5.3-codex"' .specify/extensions/cost/cost-ledger.jsonl
+}
+
+@test "model matching: display name with spaces and dots resolves ('Claude Sonnet 4.6')" {
+  stub_catalog
+  # claude-sonnet-4-6: 1000×3/1M + 1000×15/1M = 0.018
+  run bash "$RECORD_SCRIPT" --step after_plan --model 'Claude Sonnet 4.6' \
+    --in-chars 4000 --out-chars 4000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.0180'
+  grep -q '"model":"claude-sonnet-4-6"' .specify/extensions/cost/cost-ledger.jsonl
+}
+
+@test "model matching: dated variant resolves to base ID by longest prefix" {
+  stub_catalog
+  run bash "$RECORD_SCRIPT" --step after_tasks --model claude-sonnet-4-6-20260101 \
+    --in-chars 4000 --out-chars 4000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.0180'
+  grep -q '"model":"claude-sonnet-4-6"' .specify/extensions/cost/cost-ledger.jsonl
+}
+
+@test "model matching: longest prefix wins (gpt-5.4-mini variant → mini rates)" {
+  stub_catalog
+  # gpt-5.4-mini: 1000×0.75/1M + 1000×4.5/1M = 0.00525 → $0.0053 (not gpt-5.4's 0.0175)
+  run bash "$RECORD_SCRIPT" --step after_tasks --model gpt-5.4-mini-2026-01-01 \
+    --in-chars 4000 --out-chars 4000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.0053'
+}
+
+@test "model matching: unrecognized model appends visible fallback marker" {
+  stub_catalog
+  run bash "$RECORD_SCRIPT" --step after_specify --model totally-new-model \
+    --in-chars 4000 --out-chars 4000
+  [ "$status" -eq 0 ]
+  # Split fallback: 1000×3/1M + 1000×15/1M = 0.018, with inline marker.
+  printf '%s\n' "$output" | grep -q '\$0\.0180 (fallback rate — "totally-new-model" not in catalog)'
+}
+
+@test "model matching: unknown model produces no fallback marker (SC-001 format intact)" {
+  stub_catalog
+  run bash "$RECORD_SCRIPT" --step after_specify --in-chars 4000 --out-chars 2000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -qE '≈ \$[0-9]+\.[0-9]{4}$'
+}
+
+@test "model matching: explicit price_per_1k config preserves legacy blended fallback" {
+  stub_config self-report 0.003 unknown
+  # blended: (1000 + 500) × 0.003/1K = 0.0045
+  run bash "$RECORD_SCRIPT" --step after_specify --in-chars 4000 --out-chars 2000
+  [ "$status" -eq 0 ]
+  printf '%s\n' "$output" | grep -q '\$0\.0045'
 }

@@ -103,11 +103,13 @@ Create `.specify/extensions/cost/cost-config.yml` to customize:
 # log-file              — Parse provider usage log (planned for v1.1)
 provider: self-report
 
-# USD cost per 1,000 tokens. Default: $0.003 (blended midpoint).
-# Adjust to match your actual provider pricing.
-price_per_1k: 0.003
+# Legacy blended USD cost per 1,000 tokens (applies to BOTH input and output).
+# Leave unset to use per-model catalog rates, with split defaults
+# ($3/M input, $15/M output) for models missing from the catalog.
+# price_per_1k: 0.003
 
-# Model label stored in ledger entries (informational only).
+# Model label stored in ledger entries (fallback only — the active model is
+# auto-detected from the host agent and matched against model-catalog.txt).
 model: claude-sonnet-4
 ```
 
@@ -122,8 +124,9 @@ export SPECKIT_COST_PROVIDER=manual
 | Setting | Default | Notes |
 |---------|---------|-------|
 | `provider` | `self-report` | `chars ÷ 4` token heuristic |
-| `price_per_1k` | `0.003` | USD per 1K tokens (blended midpoint) |
-| `model` | `unknown` | Stored in ledger; does not affect cost |
+| `price_per_1k` | _unset_ | Legacy blended rate; only used if explicitly set |
+| Fallback rates | `$3/M` in, `$15/M` out | Used when the model is not in the catalog |
+| `model` | `unknown` | Label fallback; the active model is auto-detected |
 
 ## Providers
 

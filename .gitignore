@@ -1,1 +1,3 @@
 .claude/
+# Local cost ledger — workspace data, never version it.
+.specify/extensions/cost/cost-ledger.jsonl

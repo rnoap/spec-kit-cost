@@ -75,12 +75,12 @@ fi
 # Reads config keys once (not per-entry) for efficiency.
 _cfg_input_per_1k="$(config_get_input_rate_per_1k)"
 _cfg_output_per_1k="$(config_get_output_rate_per_1k)"
-_cfg_blended="$(config_get price_per_1k)"
-[[ -z "$_cfg_blended" ]] && _cfg_blended="0.003"
-[[ "$_cfg_blended" =~ ^[0-9]+(\.[0-9]+)?$ ]] || _cfg_blended="0.003"
+# Legacy blended rate — only honored when explicitly set in the config file.
+_cfg_blended="$(config_get_price_per_1k_raw)"
+[[ "$_cfg_blended" =~ ^[0-9]+(\.[0-9]+)?$ ]] || _cfg_blended=""
 
 # resolve_input_rate <model_id>
-# Returns input rate in per-M; never empty (falls back to default 3).
+# Returns input rate in per-M; never empty (split default: $3/M).
 resolve_input_rate() {
   local model_id="$1"
   # 1. Config override (per-1K → per-M via ×1000)
@@ -88,19 +88,24 @@ resolve_input_rate() {
     awk -v r="$_cfg_input_per_1k" 'BEGIN { printf "%.9f", r * 1000 }'
     return
   fi
-  # 2. Catalog rate for detected model
+  # 2. Catalog rate for detected model (normalized matching via catalog.sh)
   local cat_in
   cat_in="$(catalog_get_input_rate "$model_id")"
   if [[ -n "$cat_in" ]]; then
     printf '%s' "$cat_in"
     return
   fi
-  # 3. Legacy blended (per-1K → per-M)
-  awk -v r="$_cfg_blended" 'BEGIN { printf "%.9f", r * 1000 }'
+  # 3. Legacy blended (per-1K → per-M) — only when explicitly configured
+  if [[ -n "$_cfg_blended" ]]; then
+    awk -v r="$_cfg_blended" 'BEGIN { printf "%.9f", r * 1000 }'
+    return
+  fi
+  # 4. Split default (Sonnet-class input)
+  printf '3'
 }
 
 # resolve_output_rate <model_id>
-# Returns output rate in per-M; never empty (falls back to default 15).
+# Returns output rate in per-M; never empty (split default: $15/M).
 resolve_output_rate() {
   local model_id="$1"
   # 1. Config override (per-1K → per-M)
@@ -108,15 +113,20 @@ resolve_output_rate() {
     awk -v r="$_cfg_output_per_1k" 'BEGIN { printf "%.9f", r * 1000 }'
     return
   fi
-  # 2. Catalog rate for detected model
+  # 2. Catalog rate for detected model (normalized matching via catalog.sh)
   local cat_out
   cat_out="$(catalog_get_output_rate "$model_id")"
   if [[ -n "$cat_out" ]]; then
     printf '%s' "$cat_out"
     return
   fi
-  # 3. Legacy blended (per-1K → per-M)
-  awk -v r="$_cfg_blended" 'BEGIN { printf "%.9f", r * 1000 }'
+  # 3. Legacy blended (per-1K → per-M) — only when explicitly configured
+  if [[ -n "$_cfg_blended" ]]; then
+    awk -v r="$_cfg_blended" 'BEGIN { printf "%.9f", r * 1000 }'
+    return
+  fi
+  # 4. Split default (Sonnet-class output)
+  printf '15'
 }
 
 # ── Render breakdown table (CR-P3, FR-008, FR-009) ───────────────────────────
