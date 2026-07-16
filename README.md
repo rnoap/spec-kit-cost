@@ -255,19 +255,78 @@ emitted only when greater than 0. Legacy entries and readers are unaffected.
 The ledger is **append-only** — entries are never modified or deleted by normal
 operation. Use `speckit.cost.reset` to clear entries for a specific spec.
 
-## Development
+## Troubleshooting
 
-```bash
-# Install bats-core for running tests:
-# macOS:  brew install bats-core
-# Linux:  npm install -g bats  (or apt/dnf package)
+**Hooks don't seem to run / no 💰 summary appears after a step**
+Some AI assistants list `after_*` hooks without executing them. Make sure your
+project's `AGENTS.md` (or equivalent) contains the block from
+[AI Assistant Setup](#ai-assistant-setup) instructing the model to run
+`speckit.cost.record` directly whenever it sees a hook marked `optional: false`.
 
-# Run all tests:
-bats tests/bats/
+**Cost always uses the $3/M in, $15/M out fallback rate**
+This means the active model label didn't resolve against `model-catalog.txt`.
+Check that:
+- The model is actually listed in `model-catalog.txt` (or add it — no script
+  changes needed).
+- The label isn't an unusual alias; tolerant matching handles case, spaces,
+  dots, and dated suffixes (e.g. `claude-sonnet-4-6-20260101`), but very custom
+  names may still miss.
+- You aren't overriding it unintentionally via `input_rate_per_1k` /
+  `output_rate_per_1k` in `cost-config.yml`.
 
-# Run a specific suite:
-bats tests/bats/record.bats
-```
+**`⚠ Configuration may be required` after installing**
+This is expected and non-blocking — it just means `cost-config.yml` hasn't been
+created yet. The extension works zero-config with sensible defaults; create
+`.specify/extensions/cost/cost-config.yml` only if you want to customize
+provider/pricing (see [Configuration](#configuration)).
+
+**`speckit.cost.report` shows no entries / an empty table**
+- Confirm you're running it from within the spec whose cost you want to see —
+  the current spec is detected from `.specify/feature.json` or the active
+  branch name.
+- Confirm at least one `speckit.cost.record` call has succeeded for that spec
+  (check `.specify/extensions/cost/cost-ledger.jsonl` for lines with a matching
+  `"spec"` field).
+
+**`Permission denied` running the scripts directly**
+Invoke them via `bash`, e.g. `bash scripts/bash/record-cost.sh ...`, rather than
+executing them directly — this sidesteps the executable bit entirely and works
+identically on every platform.
+
+**bats tests fail only on Windows with emoji-related assertion errors**
+A handful of `tests/bats` assertions anchor on the 💰 emoji using
+`grep -qE '^💰...'`; in some Git Bash locales on Windows this fails to match
+even though the script's byte output is correct. This is a known, pre-existing
+locale quirk — not a functional regression — and doesn't affect real usage.
+
+If you hit something not covered here, please
+[open an issue](https://github.com/rnoap/spec-kit-cost/issues).
+
+## Contributing
+
+Contributions are welcome! This extension is pure POSIX bash with **no runtime
+dependencies** — please keep it that way when submitting changes.
+
+1. **Dev-install loop**: after editing files at the repo root, reinstall the
+   local copy into a spec-kit project with
+   `specify extension add . --dev --force` (this regenerates the installed
+   copy under `.specify/extensions/cost/` — never hand-edit that directory).
+2. **Run the tests** with [bats-core](https://github.com/bats-core/bats-core)
+   before opening a PR:
+   ```bash
+   bats tests/bats/              # all suites
+   bats tests/bats/record.bats   # single suite
+   ```
+3. **Follow Spec-Driven Development**: new features go through
+   `specs/<NNN>-<name>/` (spec → plan → tasks) — see the existing folders under
+   [`specs/`](specs/) for examples.
+4. **Update `CHANGELOG.md`** (Keep a Changelog format) and bump `version` in
+   `extension.yml` for any user-visible change.
+5. Open a pull request describing the change and referencing the relevant spec,
+   if any.
+
+For bugs, questions, or feature requests, please use
+[GitHub Issues](https://github.com/rnoap/spec-kit-cost/issues).
 
 ## License
 
