@@ -3,7 +3,7 @@ schema_version: "1.0"
 extension:
   id: cost
   name: "spec-kit-cost"
-  version: "1.3.0"
+  version: "1.4.0"
   description: >
     Tracks LLM token cost per spec-kit workflow step across any AI coding
     assistant (Wibey, GitHub Copilot, Cursor, etc.). Auto-detects the active
